@@ -281,18 +281,15 @@ export default function AdminDashboardPage() {
         }`}
       >
         <div className="h-16 px-5 border-b border-slate-200 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-md bg-[#14532D] flex items-center justify-center text-white font-bold text-base">
-              W
-            </div>
-            <div>
-              <span className="text-base font-bold tracking-tight text-slate-900 leading-none block">
-                wing<span className="text-[#16A34A]">poll</span>
-              </span>
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-[#16A34A]">
-                ADMIN CONSOLE
-              </span>
-            </div>
+          <div className="flex flex-col">
+            <img
+              src="/logo.png"
+              alt="WingPoll"
+              className="h-7 w-auto object-contain"
+            />
+            <span className="text-[9px] font-semibold uppercase tracking-wider text-[#16A34A] mt-0.5">
+              ADMIN CONSOLE
+            </span>
           </div>
           <button
             type="button"

@@ -70,18 +70,12 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
       >
         {/* Logo bar */}
         <div className="h-16 px-5 border-b border-slate-200 flex items-center justify-between shrink-0">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-md bg-[#16A34A] flex items-center justify-center text-white font-bold text-base">
-              W
-            </div>
-            <div>
-              <span className="text-base font-bold tracking-tight text-slate-900 leading-none block">
-                wing<span className="text-[#16A34A]">poll</span>
-              </span>
-              <span className="text-[10px] font-medium text-slate-400">
-                EARNER PORTAL
-              </span>
-            </div>
+          <Link href="/" className="flex items-center gap-2">
+            <img
+              src="/logo.png"
+              alt="WingPoll"
+              className="h-8 w-auto object-contain"
+            />
           </Link>
           <button
             type="button"

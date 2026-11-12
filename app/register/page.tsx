@@ -88,9 +88,11 @@ export default function RegisterPage() {
       <main className="flex-1 flex items-center justify-center py-12 px-4 sm:px-6">
         <div className="max-w-md w-full bg-white border border-slate-200 rounded-lg p-6 sm:p-8 shadow-xs">
           <div className="text-center mb-6">
-            <div className="w-10 h-10 rounded-md bg-[#F0FDF4] border border-emerald-200 text-[#16A34A] font-bold flex items-center justify-center mx-auto mb-3">
-              W
-            </div>
+            <img
+              src="/icon.png"
+              alt="WingPoll"
+              className="w-12 h-12 object-contain mx-auto mb-3"
+            />
             <h1 className="text-xl font-bold text-slate-900">
               Create Your Earner Account
             </h1>

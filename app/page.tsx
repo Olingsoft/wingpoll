@@ -148,20 +148,27 @@ export default function HomePage() {
 
       <main className="flex-1">
         {/* HERO SECTION */}
-        <section className="bg-white border-b border-slate-200 py-14 sm:py-20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section
+          className="relative border-b border-slate-200 py-20 sm:py-28 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: "url('/hero-bg.jpg')" }}
+        >
+          {/* Dark overlay for text legibility while keeping the laptop image visible */}
+          <div className="absolute inset-0 bg-slate-950/70" />
+
+          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
               {/* Left Column */}
-              <div className="lg:col-span-7 space-y-6">
-                <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-slate-900 leading-[1.15]">
-                  Turn Your Free Time{" "}
-                  <span className="text-[#16A34A]">Into Rewards.</span>
+              <div className="lg:col-span-8 space-y-6">
+                <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-white leading-[1.15]">
+                  A Smarter Way to Get{" "}
+                  <span className="text-[#4ade80]">Digital Work Done.</span>
                 </h1>
 
-                <p className="text-base sm:text-lg text-slate-600 max-w-2xl leading-relaxed">
-                  Complete simple digital tasks—from image transcription and
-                  email extraction to structured data entry—using your phone or
-                  computer. Get paid reliably in Kenyan Shillings via M-Pesa.
+                <p className="text-base sm:text-lg text-slate-200 max-w-2xl leading-relaxed">
+                  Access a growing collection of simple digital assignments
+                  designed around everyday computer skills. From extracting
+                  information and organizing data to processing documents, find
+                  tasks that match your abilities and interests.
                 </p>
 
                 <div className="flex flex-wrap items-center gap-3.5 pt-2">
@@ -174,25 +181,25 @@ export default function HomePage() {
                   </Link>
                   <Link
                     href="/dashboard/tasks"
-                    className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-slate-800 bg-white hover:bg-slate-50 border border-slate-300 rounded-md transition-colors"
+                    className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-white bg-white/10 hover:bg-white/20 backdrop-blur-xs border border-white/30 rounded-md transition-colors"
                   >
                     <span>Explore Tasks</span>
                   </Link>
                 </div>
 
                 {/* Key Trust Indicators */}
-                <div className="pt-4 grid grid-cols-3 gap-4 border-t border-slate-100 max-w-lg">
+                <div className="pt-5 grid grid-cols-3 gap-4 border-t border-white/20 max-w-lg">
                   <div>
-                    <p className="text-lg font-bold text-slate-900">KSh 300</p>
-                    <p className="text-xs text-slate-500">Min. M-Pesa Payout</p>
+                    <p className="text-lg font-bold text-white">KSh 300</p>
+                    <p className="text-xs text-slate-300">Min. M-Pesa Payout</p>
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-slate-900">50–150</p>
-                    <p className="text-xs text-slate-500">KSh Per Microtask</p>
+                    <p className="text-lg font-bold text-white">50–150</p>
+                    <p className="text-xs text-slate-300">KSh Per Microtask</p>
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-[#16A34A]">Instant</p>
-                    <p className="text-xs text-slate-500">Mobile Withdrawals</p>
+                    <p className="text-lg font-bold text-[#4ade80]">Instant</p>
+                    <p className="text-xs text-slate-300">Mobile Withdrawals</p>
                   </div>
                 </div>
               </div>
@@ -505,13 +512,12 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-8 border-b border-slate-100">
             <div className="space-y-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-md bg-[#16A34A] flex items-center justify-center text-white font-bold text-base">
-                  W
-                </div>
-                <span className="text-base font-bold text-slate-900">
-                  wing<span className="text-[#16A34A]">poll</span>
-                </span>
+              <div className="flex items-center">
+                <img
+                  src="/logo.png"
+                  alt="WingPoll"
+                  className="h-8 w-auto object-contain"
+                />
               </div>
               <p className="text-xs text-slate-500 leading-relaxed">
                 Clean, reliable digital microtask platform empowering earners to

@@ -12,17 +12,11 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo & Brand */}
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-md bg-[#16A34A] flex items-center justify-center text-white font-bold text-lg shadow-xs">
-            W
-          </div>
-          <div className="flex flex-col">
-            <span className="text-lg font-bold tracking-tight text-slate-900 leading-none">
-              wing<span className="text-[#16A34A]">poll</span>
-            </span>
-            <span className="text-[10px] font-medium text-slate-500 tracking-wide">
-              MICROTASK PLATFORM
-            </span>
-          </div>
+          <img
+            src="/logo.png"
+            alt="WingPoll"
+            className="h-9 w-auto object-contain"
+          />
         </Link>
 
         {/* Desktop Nav Links */}
