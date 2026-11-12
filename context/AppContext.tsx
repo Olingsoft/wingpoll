@@ -151,7 +151,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       mpesaNumber,
       requestedAt: "2026-11-12 12:52 PM",
       status: "Processing",
-      notes: "Queued for M-Pesa disbursement",
+      notes: "Pending admin approval for M-Pesa payout",
     };
 
     setWithdrawals((prev) => [newWithdrawal, ...prev]);
@@ -165,7 +165,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       id: `txn-${Date.now().toString().slice(-4)}`,
       reference: refCode,
       date: "2026-11-12",
-      description: `M-Pesa Withdrawal Request to ${mpesaNumber}`,
+      description: `M-Pesa Withdrawal Request to ${mpesaNumber} (Pending Admin Approval)`,
       amount: -amount,
       type: "Withdrawal",
       status: "Processing",
@@ -176,8 +176,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setNotifications((prev) => [
       {
         id: `notif-${Date.now()}`,
-        title: "Withdrawal Request Received",
-        message: `Your M-Pesa withdrawal of KSh ${amount.toLocaleString()} to ${mpesaNumber} is processing.`,
+        title: "Withdrawal Request Sent for Admin Approval",
+        message: `Your M-Pesa withdrawal request of KSh ${amount.toLocaleString()} to ${mpesaNumber} is awaiting admin approval.`,
         time: "Just now",
         read: false,
         type: "withdrawal",
@@ -327,9 +327,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     setTransactions((prev) =>
       prev.map((t) =>
-        t.reference === target.reference ? { ...t, status } : t
+        t.reference === target.reference
+          ? {
+              ...t,
+              status,
+              description:
+                status === "Completed"
+                  ? `M-Pesa Withdrawal Approved & Sent to ${target.mpesaNumber}`
+                  : status === "Failed"
+                  ? `M-Pesa Withdrawal Rejected (${target.mpesaNumber})`
+                  : t.description,
+            }
+          : t
       )
     );
+
+    if (status === "Completed" && target.status !== "Completed") {
+      if (target.userId === user.id) {
+        setNotifications((prev) => [
+          {
+            id: `notif-${Date.now()}`,
+            title: "Withdrawal Approved by Admin",
+            message: `Admin approved your KSh ${target.amount.toLocaleString()} withdrawal to ${target.mpesaNumber} (${target.reference}).`,
+            time: "Just now",
+            read: false,
+            type: "withdrawal",
+          },
+          ...prev,
+        ]);
+      }
+    }
 
     if (status === "Failed" && target.status !== "Failed") {
       if (target.userId === user.id) {
@@ -337,13 +364,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           ...prev,
           availableBalance: prev.availableBalance + target.amount,
         }));
+        setNotifications((prev) => [
+          {
+            id: `notif-${Date.now()}`,
+            title: "Withdrawal Request Declined",
+            message: `Your withdrawal request of KSh ${target.amount.toLocaleString()} (${target.reference}) was declined by admin and refunded to your Available Balance.`,
+            time: "Just now",
+            read: false,
+            type: "withdrawal",
+          },
+          ...prev,
+        ]);
       }
       setTransactions((prev) => [
         {
           id: `txn-rev-${Date.now().toString().slice(-4)}`,
           reference: `REV-${target.reference}`,
           date: "2026-11-12",
-          description: `Reversal: Failed M-Pesa Withdrawal ${target.reference}`,
+          description: `Reversal: Declined M-Pesa Withdrawal ${target.reference}`,
           amount: target.amount,
           type: "Withdrawal Reversal",
           status: "Completed",

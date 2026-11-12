@@ -533,7 +533,24 @@ export default function AdminDashboardPage() {
                             M-Pesa: {wth.mpesaNumber} • {wth.reference}
                           </p>
                         </div>
-                        <StatusBadge status={wth.status} />
+                        <div className="flex items-center gap-2">
+                          <StatusBadge status={wth.status} />
+                          {wth.status === "Processing" && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                processWithdrawal(
+                                  wth.id,
+                                  "Completed",
+                                  "M-Pesa Receipt: SL99P40K2M (Approved by Admin)"
+                                )
+                              }
+                              className="px-2.5 py-1 text-xs font-semibold bg-[#16A34A] hover:bg-[#15803d] text-white rounded cursor-pointer"
+                            >
+                              Approve
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>

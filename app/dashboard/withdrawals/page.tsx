@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { CheckCircle2, ShieldCheck, Smartphone, Wallet } from "lucide-react";
+import { CheckCircle2, Clock, ShieldCheck, Smartphone, Wallet } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { StatsCard } from "@/components/StatsCard";
 import { WithdrawalForm } from "@/components/WithdrawalForm";
@@ -14,6 +14,9 @@ export default function WithdrawalsPage() {
   const completedTotal = userWithdrawals
     .filter((w) => w.status === "Completed")
     .reduce((acc, w) => acc + w.amount, 0);
+  const pendingApprovalTotal = userWithdrawals
+    .filter((w) => w.status === "Processing")
+    .reduce((acc, w) => acc + w.amount, 0);
 
   return (
     <div className="space-y-6">
@@ -22,23 +25,29 @@ export default function WithdrawalsPage() {
           M-Pesa Withdrawals
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-          Withdraw your available balance directly to your Safaricom M-Pesa
-          account once your balance reaches KSh 300.
+          Submit a withdrawal request once your available balance reaches KSh
+          300. Requests are reviewed and approved by an admin for M-Pesa payout.
         </p>
       </div>
 
       {/* Top Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard
           title="Available Balance"
           value={`KSh ${user.availableBalance.toLocaleString()}`}
           subtitle={
             user.availableBalance >= 300
-              ? "Ready for M-Pesa withdrawal"
+              ? "Eligible to request withdrawal"
               : "Minimum KSh 300 required"
           }
           icon={<Wallet className="w-5 h-5" />}
           highlighted
+        />
+        <StatsCard
+          title="Pending Admin Approval"
+          value={`KSh ${pendingApprovalTotal.toLocaleString()}`}
+          subtitle="Awaiting admin payout review"
+          icon={<Clock className="w-5 h-5" />}
         />
         <StatsCard
           title="Minimum Withdrawal"
@@ -47,7 +56,7 @@ export default function WithdrawalsPage() {
           icon={<Smartphone className="w-5 h-5" />}
         />
         <StatsCard
-          title="Total Withdrawn"
+          title="Total Approved & Paid"
           value={`KSh ${completedTotal.toLocaleString()}`}
           subtitle="Completed M-Pesa payouts"
           icon={<CheckCircle2 className="w-5 h-5" />}
@@ -64,31 +73,33 @@ export default function WithdrawalsPage() {
           <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-3 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
             <div className="flex items-center gap-2 text-[#14532D] font-semibold text-sm">
               <ShieldCheck className="w-4 h-4 text-[#16A34A]" />
-              <span>M-Pesa Withdrawal Guidelines</span>
+              <span>How Withdrawal Approval Works</span>
             </div>
             <ul className="space-y-2.5 text-xs text-slate-600 leading-relaxed">
               <li className="flex items-start gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A] mt-1.5 shrink-0" />
                 <span>
-                  <strong>Minimum Threshold:</strong> You can request a payout
-                  anytime your Available Balance is{" "}
-                  <strong>KSh 300 or higher</strong>.
+                  <strong>1. Submit Request (Min. KSh 300):</strong> Enter your
+                  withdrawal amount and M-Pesa number to submit a payout
+                  request.
                 </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A] mt-1.5 shrink-0" />
                 <span>
-                  <strong>Phone Number Format:</strong> Ensure your Safaricom
-                  M-Pesa phone number is active and registered in your name
-                  (e.g., <code className="font-mono">0712345678</code>).
+                  <strong>2. Admin Review & Approval:</strong> Your request
+                  enters the admin queue with status{" "}
+                  <strong>Processing</strong> while an administrator verifies
+                  and approves your payout.
                 </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A] mt-1.5 shrink-0" />
                 <span>
-                  <strong>Failed Payouts:</strong> If an M-Pesa transfer fails
-                  due to network timeout, the full amount is automatically
-                  reversed to your Available Balance.
+                  <strong>3. M-Pesa Disbursement or Reversal:</strong> Once
+                  approved by the admin, the status updates to{" "}
+                  <strong>Completed</strong>. If declined, the full amount is
+                  automatically refunded to your Available Balance.
                 </span>
               </li>
             </ul>
@@ -100,10 +111,11 @@ export default function WithdrawalsPage() {
       <div className="space-y-3">
         <div>
           <h2 className="text-base font-semibold text-slate-900">
-            Withdrawal History
+            My Withdrawal Requests History
           </h2>
           <p className="text-xs text-slate-500">
-            All M-Pesa payout requests and their disbursement statuses
+            Track your submitted M-Pesa withdrawal requests and admin approval
+            statuses
           </p>
         </div>
 
@@ -116,7 +128,7 @@ export default function WithdrawalsPage() {
                   <th className="py-3.5 px-4">Requested Date</th>
                   <th className="py-3.5 px-4">M-Pesa Number</th>
                   <th className="py-3.5 px-4">Amount</th>
-                  <th className="py-3.5 px-4">Receipt / Notes</th>
+                  <th className="py-3.5 px-4">Admin Review / Receipt Notes</th>
                   <th className="py-3.5 px-4 text-right">Status</th>
                 </tr>
               </thead>
@@ -154,4 +166,3 @@ export default function WithdrawalsPage() {
     </div>
   );
 }
-

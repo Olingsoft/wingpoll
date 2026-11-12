@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -98,7 +99,7 @@ export function WithdrawalForm() {
             Request M-Pesa Withdrawal
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
-            Instant mobile money transfer to your registered Kenyan phone number
+            Submit a withdrawal request for admin review and M-Pesa disbursement
           </p>
         </div>
         <span className="px-2.5 py-1 text-xs font-bold rounded bg-[#F0FDF4] text-[#16A34A] border border-emerald-200">
@@ -129,18 +130,28 @@ export function WithdrawalForm() {
 
       {/* Success Banner */}
       {successReceipt && (
-        <div className="mb-5 p-4 rounded-md bg-[#F0FDF4] border border-emerald-200 flex items-start gap-3">
-          <CheckCircle2 className="w-5 h-5 text-[#16A34A] shrink-0 mt-0.5" />
-          <div className="text-xs text-[#14532D] space-y-1 flex-1">
-            <p className="font-semibold">
-              Withdrawal Request Submitted ({successReceipt.reference})
-            </p>
-            <p>
-              KSh {successReceipt.amount.toLocaleString()} is being processed to
-              M-Pesa number <strong>{successReceipt.mpesaNumber}</strong>.
-              Simulated status: <strong>Processing</strong>.
-            </p>
+        <div className="mb-5 p-4 rounded-md bg-[#F0FDF4] border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 text-[#16A34A] shrink-0 mt-0.5" />
+            <div className="text-xs text-[#14532D] space-y-1">
+              <p className="font-semibold">
+                Withdrawal Request Sent for Admin Approval (
+                {successReceipt.reference})
+              </p>
+              <p>
+                Your request for{" "}
+                <strong>KSh {successReceipt.amount.toLocaleString()}</strong> to
+                M-Pesa number <strong>{successReceipt.mpesaNumber}</strong> is
+                now <strong>Pending Admin Approval (Processing)</strong>.
+              </p>
+            </div>
           </div>
+          <Link
+            href="/admin"
+            className="px-3 py-1.5 text-xs font-semibold bg-[#16A34A] text-white rounded-md hover:bg-[#15803d] shrink-0 text-center"
+          >
+            Approve in Admin →
+          </Link>
         </div>
       )}
 
@@ -215,8 +226,8 @@ export function WithdrawalForm() {
         <div className="p-3 rounded-md bg-slate-50 border border-slate-200 flex items-center gap-2.5 text-xs text-slate-600">
           <ShieldCheck className="w-4 h-4 text-[#16A34A] shrink-0" />
           <span>
-            No withdrawal fee charged by Wingpoll. Funds are sent directly to
-            your M-Pesa wallet.
+            Your withdrawal request will be reviewed and approved by an
+            administrator before M-Pesa disbursement.
           </span>
         </div>
 
@@ -226,7 +237,7 @@ export function WithdrawalForm() {
           className="w-full py-2.5 px-4 rounded-md bg-[#16A34A] hover:bg-[#15803d] disabled:bg-slate-300 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
         >
           <Wallet className="w-4 h-4" />
-          <span>Confirm Withdrawal</span>
+          <span>Request Withdrawal</span>
         </button>
       </form>
 
@@ -234,14 +245,14 @@ export function WithdrawalForm() {
         isOpen={confirmOpen}
         onClose={() => setConfirmOpen(false)}
         onConfirm={handleConfirmWithdrawal}
-        title="Confirm M-Pesa Withdrawal"
-        description="Please verify your M-Pesa phone number and withdrawal amount before submitting your payout request."
-        confirmLabel="Send to M-Pesa"
+        title="Submit M-Pesa Withdrawal Request"
+        description="Your withdrawal request will be sent to the administrator for verification and M-Pesa disbursement. Please confirm your details below."
+        confirmLabel="Submit Withdrawal Request"
         summaryItems={
           pendingValues
             ? [
                 {
-                  label: "Withdrawal Amount",
+                  label: "Requested Amount",
                   value: `KSh ${pendingValues.amount.toLocaleString()}`,
                 },
                 {
@@ -249,8 +260,8 @@ export function WithdrawalForm() {
                   value: pendingValues.mpesaNumber,
                 },
                 {
-                  label: "Payment Method",
-                  value: "Safaricom M-Pesa",
+                  label: "Review Status",
+                  value: "Pending Admin Approval",
                 },
                 {
                   label: "Remaining Balance",
@@ -265,4 +276,3 @@ export function WithdrawalForm() {
     </div>
   );
 }
-

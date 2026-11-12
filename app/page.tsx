@@ -57,9 +57,9 @@ const HOW_IT_WORKS_STEPS = [
   },
   {
     step: "05",
-    title: "Receive your reward",
+    title: "Request withdrawal",
     description:
-      "Approved task rewards are credited to your wallet. Withdraw via M-Pesa from KSh 300.",
+      "Once your balance reaches KSh 300, submit a withdrawal request for admin approval and M-Pesa payout.",
     icon: Wallet,
   },
 ];
@@ -128,7 +128,7 @@ const FAQS = [
   {
     question: "How do M-Pesa withdrawals work?",
     answer:
-      "Once your Available Balance reaches at least KSh 300, go to the Withdrawals page, enter the amount and your Safaricom M-Pesa phone number, and confirm your payout.",
+      "Once your Available Balance reaches at least KSh 300, go to the Withdrawals page, enter the amount and your Safaricom M-Pesa phone number, and submit a withdrawal request. An administrator reviews and approves your request to disburse the funds via M-Pesa.",
   },
   {
     question: "How does the referral program work?",
@@ -199,8 +199,8 @@ export default function HomePage() {
                     <p className="text-xs text-slate-300">KSh Per Microtask</p>
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-[#4ade80]">Instant</p>
-                    <p className="text-xs text-slate-300">Mobile Withdrawals</p>
+                    <p className="text-lg font-bold text-[#4ade80]">M-Pesa</p>
+                    <p className="text-xs text-slate-300">Approved Payouts</p>
                   </div>
                 </div>
               </div>
@@ -435,12 +435,12 @@ export default function HomePage() {
                   <Smartphone className="w-5 h-5" />
                 </div>
                 <h3 className="text-base font-bold text-slate-900">
-                  Fast M-Pesa Withdrawals
+                  M-Pesa Withdrawal Requests
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Access your earnings easily once your available balance
-                  reaches our low minimum threshold of{" "}
-                  <strong>KSh 300</strong>. Payouts are sent straight to your
+                  Request a payout once your available balance reaches our
+                  minimum threshold of <strong>KSh 300</strong>. Requests are
+                  verified and approved by an admin before disbursement to your
                   Kenyan M-Pesa number.
                 </p>
                 <ul className="space-y-2 pt-2 text-xs text-slate-700">
@@ -450,7 +450,7 @@ export default function HomePage() {
                   </li>
                   <li className="flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-[#16A34A] shrink-0" />
-                    <span>Supported method: Safaricom M-Pesa</span>
+                    <span>Admin review & approval for secure M-Pesa payout</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-[#16A34A] shrink-0" />
