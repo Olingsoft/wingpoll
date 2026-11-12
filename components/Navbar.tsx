@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Menu, ShieldCheck, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 
 export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -21,10 +21,7 @@ export function Navbar() {
 
         {/* Desktop Nav Links */}
         <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-600">
-          <Link
-            href="/"
-            className="hover:text-[#16A34A] transition-colors"
-          >
+          <Link href="/" className="hover:text-[#16A34A] transition-colors">
             Home
           </Link>
           <Link
@@ -40,23 +37,22 @@ export function Navbar() {
             Available tasks
           </Link>
           <Link
-            href="/#about-us"
+            href="/about"
             className="hover:text-[#16A34A] transition-colors"
           >
             About us
           </Link>
           <Link
-            href="/dashboard"
-            className="text-xs font-semibold px-2.5 py-1 rounded bg-[#F0FDF4] text-[#14532D] border border-emerald-200 hover:bg-emerald-100 transition-colors"
+            href="/blogs"
+            className="hover:text-[#16A34A] transition-colors"
           >
-            User Dashboard
+            Blogs
           </Link>
           <Link
-            href="/admin"
-            className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 transition-colors"
+            href="/contact"
+            className="hover:text-[#16A34A] transition-colors"
           >
-            <ShieldCheck className="w-3.5 h-3.5 text-[#14532D]" />
-            Admin Portal
+            Contact us
           </Link>
         </nav>
 
@@ -117,27 +113,25 @@ export function Navbar() {
               Available tasks
             </Link>
             <Link
-              href="/#about-us"
+              href="/about"
               onClick={() => setMobileMenuOpen(false)}
               className="py-1.5 hover:text-[#16A34A]"
             >
               About us
             </Link>
             <Link
-              href="/dashboard"
+              href="/blogs"
               onClick={() => setMobileMenuOpen(false)}
-              className="py-1.5 text-[#16A34A] font-semibold flex items-center gap-1.5"
+              className="py-1.5 hover:text-[#16A34A]"
             >
-              <CheckCircle2 className="w-4 h-4" />
-              Open User Dashboard (John Kamau)
+              Blogs
             </Link>
             <Link
-              href="/admin"
+              href="/contact"
               onClick={() => setMobileMenuOpen(false)}
-              className="py-1.5 text-slate-700 font-semibold flex items-center gap-1.5"
+              className="py-1.5 hover:text-[#16A34A]"
             >
-              <ShieldCheck className="w-4 h-4 text-[#14532D]" />
-              Open Admin Dashboard
+              Contact us
             </Link>
           </div>
           <div className="pt-3 border-t border-slate-100 flex items-center gap-3">
@@ -161,4 +155,3 @@ export function Navbar() {
     </header>
   );
 }
-
