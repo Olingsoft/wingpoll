@@ -15,6 +15,7 @@ export const INITIAL_USER: UserProfile = {
   email: "john@example.com",
   phone: "0712345678",
   mpesaNumber: "0712345678",
+  role: "user",
   avatarInitials: "JK",
   availableBalance: 450,
   totalEarnings: 1250,
@@ -30,6 +31,26 @@ export const INITIAL_USER: UserProfile = {
 };
 
 export const MOCK_ALL_USERS: UserProfile[] = [
+  {
+    id: "adm-001",
+    name: "WingPoll Super Admin",
+    email: "admin@wingpoll.co.ke",
+    phone: "0700123456",
+    mpesaNumber: "0700123456",
+    role: "admin",
+    avatarInitials: "WA",
+    availableBalance: 0,
+    totalEarnings: 0,
+    pendingEarnings: 0,
+    completedTasks: 0,
+    totalReferrals: 0,
+    referralEarnings: 0,
+    taskEarnings: 0,
+    referralCode: "ADMIN254",
+    referralLink: "https://wingpoll.co.ke/register?ref=ADMIN254",
+    joinedDate: "2026-06-01",
+    status: "Active",
+  },
   INITIAL_USER,
   {
     id: "usr-002",
@@ -110,6 +131,39 @@ export const MOCK_ALL_USERS: UserProfile[] = [
 ];
 
 export const INITIAL_TASKS: Task[] = [
+  {
+    id: "tsk-100",
+    title: "Extract Speaker Details & Key Figures From Video",
+    shortDescription:
+      "Watch the attached 45-second business showcase video and extract all company names, phone numbers, and quoted prices.",
+    category: "Video Extraction",
+    estimatedTime: "12 mins",
+    reward: 95,
+    difficulty: "Easy",
+    availableSlots: 30,
+    totalSlots: 40,
+    createdAt: "2026-11-14",
+    deadline: "2026-11-24",
+    active: true,
+    instructions: [
+      "Watch the attached task video carefully in the video player below (or download the video file).",
+      "Pause at each slide or lower-third banner shown in the video.",
+      "Extract every company name, contact phone number, email address, and product price mentioned.",
+      "Type the extracted information clearly into the submission box below.",
+      "Submit your completed extraction for admin verification.",
+    ],
+    submissionFormat: "multiline_text",
+    attachment: {
+      name: "Nairobi_Retail_Showcase_Clip.mp4",
+      size: "6.8 MB",
+      type: "video",
+      sampleContent: [
+        "[00:05] Brand: GreenHarvest Agrovet — Tel: 0722 310 900 — Solar Water Pump: KSh 18,500",
+        "[00:18] Brand: RiftValley Millers — Email: sales@rvmillers.co.ke — 50kg Maize Flour Wholesale: KSh 3,200",
+        "[00:32] Brand: MobiTech Kenya — Tel: 0711 800 445 — POS Thermal Printer: KSh 6,400",
+      ],
+    },
+  },
   {
     id: "tsk-101",
     title: "Extract Email Addresses From Image",

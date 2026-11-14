@@ -1,4 +1,5 @@
 export type TaskCategory =
+  | "Video Extraction"
   | "Image to Text"
   | "Data Entry"
   | "Email Extraction"
@@ -21,8 +22,9 @@ export type SubmissionFormat =
 export interface TaskAttachment {
   name: string;
   size: string;
-  type: "image" | "pdf" | "document" | "spreadsheet";
+  type: "image" | "video" | "pdf" | "document" | "spreadsheet";
   previewUrl?: string;
+  cloudinaryPublicId?: string;
   sampleContent?: string[];
 }
 
@@ -78,6 +80,7 @@ export interface Submission {
     fieldValues?: Record<string, string>;
     fileName?: string;
     fileSize?: string;
+    fileUrl?: string;
     notes?: string;
   };
 }
@@ -156,12 +159,15 @@ export interface Advertisement {
   badgeText?: string;
 }
 
+export type UserRole = "user" | "admin";
+
 export interface UserProfile {
   id: string;
   name: string;
   email: string;
   phone: string;
   mpesaNumber: string;
+  role?: UserRole;
   avatarInitials: string;
   photoURL?: string;
   authProvider?: "email" | "google" | "demo";

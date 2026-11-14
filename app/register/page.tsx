@@ -83,7 +83,9 @@ export default function RegisterPage() {
       const fbUser = await registerWithEmail(
         data.fullName,
         data.email,
-        data.password
+        data.password,
+        data.phone,
+        data.referralCode
       );
       updateUserProfile({
         id: fbUser.uid,
@@ -91,6 +93,7 @@ export default function RegisterPage() {
         email: data.email,
         phone: data.phone,
         mpesaNumber: data.phone,
+        role: "user",
         authProvider: "email",
       });
       setRegisteredSuccess(true);
@@ -112,6 +115,7 @@ export default function RegisterPage() {
         name: fbUser.displayName || "Google User",
         email: fbUser.email || "",
         photoURL: fbUser.photoURL || undefined,
+        role: "user",
         authProvider: "google",
       });
       setRegisteredSuccess(true);

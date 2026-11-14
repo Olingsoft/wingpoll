@@ -6,6 +6,7 @@ import { TaskCategory } from "@/lib/types";
 
 export const TASK_CATEGORIES: ("All" | TaskCategory)[] = [
   "All",
+  "Video Extraction",
   "Image to Text",
   "Data Entry",
   "Email Extraction",

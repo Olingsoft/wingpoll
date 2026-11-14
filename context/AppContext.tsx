@@ -26,11 +26,18 @@ import {
 } from "@/lib/mock-data";
 import {
   auth,
+  createAdminAccountInFirebase,
+  deleteTaskFromFirestore,
+  fetchAllTasksFromFirestore,
+  fetchAllUsersFromFirestore,
   FirebaseUser,
   logoutFirebase,
   onAuthStateChanged,
   reloadFirebaseUser,
+  saveTaskToFirestore,
+  saveUserToFirestore,
   sendVerificationEmail,
+  updateUserInFirestore,
 } from "@/lib/firebase";
 
 interface AppContextType {
@@ -58,6 +65,12 @@ interface AppContextType {
   markAllNotificationsRead: () => void;
   markNotificationRead: (id: string) => void;
   // Admin methods
+  createAdminAccount: (params: {
+    fullName: string;
+    email: string;
+    phone: string;
+    password: string;
+  }) => Promise<UserProfile>;
   createTask: (taskData: Omit<Task, "id" | "createdAt">) => Task;
   updateTask: (taskId: string, updates: Partial<Task>) => void;
   deleteTask: (taskId: string) => void;
@@ -103,66 +116,69 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     INITIAL_NOTIFICATIONS
   );
 
+  // Load persisted users and tasks from Firestore on startup
+  useEffect(() => {
+    fetchAllUsersFromFirestore().then((firestoreUsers) => {
+      if (firestoreUsers.length > 0) {
+        setAllUsers((prev) => {
+          const merged = [...prev];
+          firestoreUsers.forEach((fu) => {
+            const idx = merged.findIndex(
+              (u) => u.id === fu.id || (fu.email && u.email === fu.email)
+            );
+            if (idx >= 0) {
+              merged[idx] = { ...merged[idx], ...fu };
+            } else {
+              merged.unshift(fu);
+            }
+          });
+          return merged;
+        });
+      }
+    });
+
+    fetchAllTasksFromFirestore().then((firestoreTasks) => {
+      if (firestoreTasks.length > 0) {
+        setTasks((prev) => {
+          const merged = [...prev];
+          firestoreTasks.forEach((ft) => {
+            const idx = merged.findIndex((t) => t.id === ft.id);
+            if (idx >= 0) {
+              merged[idx] = ft;
+            } else {
+              merged.unshift(ft);
+            }
+          });
+          return merged;
+        });
+      }
+    });
+  }, []);
+
   // Listen to Firebase Auth state changes (Email/Password & Google Sign-In)
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
       setEmailVerified(fbUser ? fbUser.emailVerified : false);
       setAuthLoading(false);
 
       if (fbUser) {
-        const displayName =
-          fbUser.displayName ||
-          (fbUser.email ? fbUser.email.split("@")[0] : "WingPoll Earner");
-        const initials = displayName
-          .trim()
-          .split(" ")
-          .map((part) => part[0])
-          .join("")
-          .toUpperCase()
-          .slice(0, 2);
-        const isGoogle = fbUser.providerData.some(
-          (p) => p.providerId === "google.com"
-        );
-        const refCode = `${displayName
-          .replace(/[^a-zA-Z]/g, "")
-          .toUpperCase()
-          .slice(0, 5) || "WING"}${fbUser.uid.slice(0, 3).toUpperCase()}`;
-
+        const savedProfile = await saveUserToFirestore(fbUser);
         setUser((prev) => ({
           ...prev,
-          id: fbUser.uid,
-          name: displayName,
-          email: fbUser.email || prev.email,
-          phone: fbUser.phoneNumber || prev.phone,
-          avatarInitials: initials || "WP",
-          photoURL: fbUser.photoURL || undefined,
-          authProvider: isGoogle ? "google" : "email",
-          referralCode: prev.referralCode || refCode,
-          referralLink: `https://wingpoll.co.ke/register?ref=${
-            prev.referralCode || refCode
-          }`,
+          ...savedProfile,
         }));
 
         setAllUsers((prevUsers) => {
-          const exists = prevUsers.some(
-            (u) => u.id === fbUser.uid || u.email === fbUser.email
+          const idx = prevUsers.findIndex(
+            (u) => u.id === savedProfile.id || u.email === savedProfile.email
           );
-          if (exists) return prevUsers;
-          const newProfile: UserProfile = {
-            ...INITIAL_USER,
-            id: fbUser.uid,
-            name: displayName,
-            email: fbUser.email || "",
-            avatarInitials: initials || "WP",
-            photoURL: fbUser.photoURL || undefined,
-            authProvider: isGoogle ? "google" : "email",
-            referralCode: refCode,
-            referralLink: `https://wingpoll.co.ke/register?ref=${refCode}`,
-            joinedDate: new Date().toISOString().slice(0, 10),
-            status: "Active",
-          };
-          return [newProfile, ...prevUsers];
+          if (idx >= 0) {
+            const copy = [...prevUsers];
+            copy[idx] = { ...copy[idx], ...savedProfile };
+            return copy;
+          }
+          return [savedProfile, ...prevUsers];
         });
       }
     });
@@ -321,29 +337,66 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
+  const createAdminAccount = async (params: {
+    fullName: string;
+    email: string;
+    phone: string;
+    password: string;
+  }): Promise<UserProfile> => {
+    const newAdmin = await createAdminAccountInFirebase(params);
+    setAllUsers((prev) => {
+      const exists = prev.some(
+        (u) => u.id === newAdmin.id || u.email === newAdmin.email
+      );
+      if (exists) {
+        return prev.map((u) =>
+          u.id === newAdmin.id || u.email === newAdmin.email ? newAdmin : u
+        );
+      }
+      return [newAdmin, ...prev];
+    });
+    return newAdmin;
+  };
+
   const createTask = (taskData: Omit<Task, "id" | "createdAt">): Task => {
     const newTask: Task = {
       ...taskData,
       id: `tsk-${Math.floor(200 + Math.random() * 799)}`,
-      createdAt: "2026-11-12",
+      createdAt: new Date().toISOString().slice(0, 10),
     };
     setTasks((prev) => [newTask, ...prev]);
+    saveTaskToFirestore(newTask);
     return newTask;
   };
 
   const updateTask = (taskId: string, updates: Partial<Task>) => {
     setTasks((prev) =>
-      prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t))
+      prev.map((t) => {
+        if (t.id === taskId) {
+          const updated = { ...t, ...updates };
+          saveTaskToFirestore(updated);
+          return updated;
+        }
+        return t;
+      })
     );
   };
 
   const deleteTask = (taskId: string) => {
     setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    deleteTaskFromFirestore(taskId);
   };
 
   const toggleTaskActive = (taskId: string) => {
     setTasks((prev) =>
-      prev.map((t) => (t.id === taskId ? { ...t, active: !t.active } : t))
+      prev.map((t) => {
+        if (t.id === taskId) {
+          const updated = { ...t, active: !t.active };
+          saveTaskToFirestore(updated);
+          return updated;
+        }
+        return t;
+      })
     );
   };
 
@@ -533,11 +586,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const toggleUserStatus = (userId: string) => {
     setAllUsers((prev) =>
-      prev.map((u) =>
-        u.id === userId
-          ? { ...u, status: u.status === "Active" ? "Suspended" : "Active" }
-          : u
-      )
+      prev.map((u) => {
+        if (u.id === userId) {
+          const nextStatus = u.status === "Active" ? "Suspended" : "Active";
+          updateUserInFirestore(userId, { status: nextStatus });
+          return { ...u, status: nextStatus };
+        }
+        return u;
+      })
     );
   };
 
@@ -564,6 +620,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updateUserProfile,
         markAllNotificationsRead,
         markNotificationRead,
+        createAdminAccount,
         createTask,
         updateTask,
         deleteTask,

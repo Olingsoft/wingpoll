@@ -12,8 +12,10 @@ import {
   Eye,
   FileSpreadsheet,
   FileText,
+  Film,
   Image as ImageIcon,
   Layers,
+  Loader2,
   Plus,
   Send,
   Trash2,
@@ -22,6 +24,7 @@ import {
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { SubmissionFormat } from "@/lib/types";
+import { formatFileSize, uploadToCloudinary } from "@/lib/cloudinary";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
 import { AdvertisementBanner } from "@/components/AdvertisementBanner";
@@ -95,7 +98,9 @@ export default function TaskDetailsPage() {
   const [selectedFile, setSelectedFile] = useState<{
     name: string;
     size: string;
+    url?: string;
   } | null>(null);
+  const [isUploadingToCloudinary, setIsUploadingToCloudinary] = useState(false);
   const [optionalNotes, setOptionalNotes] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
@@ -105,6 +110,10 @@ export default function TaskDetailsPage() {
 
   const handleDownloadAttachment = () => {
     setDownloadedNotice(true);
+    if (task.attachment.previewUrl) {
+      window.open(task.attachment.previewUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
     const content = [
       `WINGPOLL TASK ATTACHMENT: ${task.attachment.name}`,
       `Task: ${task.title} (Reward: KSh ${task.reward})`,
@@ -116,7 +125,10 @@ export default function TaskDetailsPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = task.attachment.name.replace(/\.(png|jpg|docx|csv)$/i, ".txt");
+    a.download = task.attachment.name.replace(
+      /\.(png|jpg|docx|csv|mp4|webm)$/i,
+      ".txt"
+    );
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -145,15 +157,28 @@ export default function TaskDetailsPage() {
     );
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const kb = Math.max(12, Math.round(file.size / 1024));
-      setSelectedFile({
-        name: file.name,
-        size: `${kb} KB`,
-      });
       setValidationError(null);
+      setIsUploadingToCloudinary(true);
+      try {
+        const uploaded = await uploadToCloudinary(file, "wingpoll_submissions");
+        setSelectedFile({
+          name: file.name,
+          size: formatFileSize(uploaded.bytes || file.size),
+          url: uploaded.secureUrl,
+        });
+      } catch (err) {
+        // Fallback to local file metadata if offline
+        setSelectedFile({
+          name: file.name,
+          size: formatFileSize(file.size),
+        });
+        console.warn("Cloudinary submission upload warning:", err);
+      } finally {
+        setIsUploadingToCloudinary(false);
+      }
     }
   };
 
@@ -221,6 +246,7 @@ export default function TaskDetailsPage() {
       fieldValues: activeFormat === "multiple_fields" ? fieldValues : undefined,
       fileName: selectedFile?.name,
       fileSize: selectedFile?.size,
+      fileUrl: selectedFile?.url,
       notes: optionalNotes,
     });
 
@@ -353,7 +379,9 @@ export default function TaskDetailsPage() {
             <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-md bg-white border border-slate-200 flex items-center justify-center text-[#16A34A]">
-                  {task.attachment.type === "image" ? (
+                  {task.attachment.type === "video" ? (
+                    <Film className="w-5 h-5" />
+                  ) : task.attachment.type === "image" ? (
                     <ImageIcon className="w-5 h-5" />
                   ) : task.attachment.type === "spreadsheet" ? (
                     <FileSpreadsheet className="w-5 h-5" />
@@ -366,7 +394,10 @@ export default function TaskDetailsPage() {
                     {task.attachment.name}
                   </p>
                   <p className="text-[11px] text-slate-500">
-                    File size: {task.attachment.size} • Source Attachment
+                    File size: {task.attachment.size} •{" "}
+                    {task.attachment.type === "video"
+                      ? "Video Source (Extract Information From Video)"
+                      : "Source Attachment"}
                   </p>
                 </div>
               </div>
@@ -379,28 +410,67 @@ export default function TaskDetailsPage() {
                 <Download className="w-4 h-4" />
                 <span>
                   {downloadedNotice
-                    ? "Attachment Downloaded ✓"
+                    ? "Attachment Opened / Downloaded ✓"
+                    : task.attachment.previewUrl
+                    ? "Open / Download Media"
                     : "Download Attachment"}
                 </span>
               </button>
             </div>
 
-            {/* Reference Image / Document Live Preview */}
-            <div className="space-y-2">
+            {/* Reference Video / Image / Document Live Preview */}
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700">
                   <Eye className="w-3.5 h-3.5 text-[#16A34A]" />
-                  Reference Attachment Preview
+                  {task.attachment.type === "video"
+                    ? "Task Video Player — Watch & Extract Information"
+                    : "Reference Attachment Preview"}
                 </span>
                 <span className="text-[11px] text-slate-400">
-                  Inspect content below to complete your task
+                  {task.attachment.previewUrl
+                    ? "Hosted on Cloudinary CDN"
+                    : "Inspect content below to complete your task"}
                 </span>
               </div>
 
+              {/* If Cloudinary Video URL is available, render real HTML5 Video Player */}
+              {task.attachment.type === "video" && task.attachment.previewUrl && (
+                <div className="rounded-lg overflow-hidden border border-slate-800 bg-black">
+                  <video
+                    src={task.attachment.previewUrl}
+                    controls
+                    preload="metadata"
+                    className="w-full max-h-96 object-contain bg-black"
+                  >
+                    Your browser does not support HTML5 video playback.
+                  </video>
+                </div>
+              )}
+
+              {/* If Cloudinary Image URL is available, render Image Preview */}
+              {task.attachment.type === "image" && task.attachment.previewUrl && (
+                <div className="rounded-lg overflow-hidden border border-slate-200 bg-slate-100 p-2">
+                  <img
+                    src={task.attachment.previewUrl}
+                    alt={task.attachment.name}
+                    className="w-full max-h-96 object-contain rounded mx-auto"
+                  />
+                </div>
+              )}
+
               <div className="bg-slate-900 text-slate-100 rounded-lg p-4 sm:p-5 border border-slate-800 font-mono text-xs space-y-2 overflow-x-auto">
                 <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-700 text-[11px] text-slate-400">
-                  <span>PREVIEW: {task.attachment.name}</span>
-                  <span className="text-emerald-400">SCAN QUALITY: HIGH</span>
+                  <span>
+                    {task.attachment.type === "video"
+                      ? `VIDEO KEYFRAMES / CAPTIONS: ${task.attachment.name}`
+                      : `PREVIEW: ${task.attachment.name}`}
+                  </span>
+                  <span className="text-emerald-400">
+                    {task.attachment.type === "video"
+                      ? "HD VIDEO STREAM"
+                      : "SCAN QUALITY: HIGH"}
+                  </span>
                 </div>
                 {(task.attachment.sampleContent || []).map((line, i) => (
                   <p key={i} className="leading-relaxed text-slate-200">
@@ -666,20 +736,35 @@ export default function TaskDetailsPage() {
                   <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center bg-slate-50/60 hover:border-[#16A34A] transition-colors">
                     <Upload className="w-7 h-7 text-[#16A34A] mx-auto mb-2" />
                     <p className="text-xs font-semibold text-slate-800">
-                      {selectedFile
-                        ? `Selected: ${selectedFile.name} (${selectedFile.size})`
-                        : "Select a file from your device to attach"}
+                      {isUploadingToCloudinary
+                        ? "Uploading file to Cloudinary..."
+                        : selectedFile
+                        ? `Uploaded: ${selectedFile.name} (${selectedFile.size})`
+                        : "Select a file from your device to upload to Cloudinary"}
                     </p>
+                    {selectedFile?.url && (
+                      <p className="text-[11px] text-[#16A34A] font-medium mt-1">
+                        ✓ Saved on Cloudinary CDN
+                      </p>
+                    )}
                     <p className="text-[11px] text-slate-500 mt-1 mb-3">
                       {activeFormat === "pdf_upload"
                         ? "Accepted format: PDF up to 10 MB"
-                        : "Accepted formats: DOCX, XLSX, CSV, TXT up to 10 MB"}
+                        : "Accepted formats: DOCX, XLSX, CSV, TXT, PDF up to 10 MB"}
                     </p>
                     <div className="flex items-center justify-center gap-2">
-                      <label className="px-3.5 py-1.5 text-xs font-semibold bg-white border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50 cursor-pointer">
-                        Choose File
+                      <label className="px-3.5 py-1.5 text-xs font-semibold bg-white border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50 cursor-pointer inline-flex items-center gap-1.5">
+                        {isUploadingToCloudinary && (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-[#16A34A]" />
+                        )}
+                        <span>
+                          {isUploadingToCloudinary
+                            ? "Uploading..."
+                            : "Choose & Upload File"}
+                        </span>
                         <input
                           type="file"
+                          disabled={isUploadingToCloudinary}
                           accept={
                             activeFormat === "pdf_upload"
                               ? ".pdf"

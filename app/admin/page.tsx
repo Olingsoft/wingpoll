@@ -10,10 +10,13 @@ import {
   ClipboardCheck,
   CreditCard,
   Edit3,
+  ExternalLink,
   Eye,
   FileText,
+  Film,
   History,
   LayoutDashboard,
+  Loader2,
   Megaphone,
   Menu,
   PlusCircle,
@@ -21,7 +24,9 @@ import {
   Settings,
   ShieldCheck,
   Trash2,
+  Upload,
   UserCheck,
+  UserPlus,
   Users,
   Wallet,
   X,
@@ -33,9 +38,12 @@ import {
   Submission,
   SubmissionFormat,
   Task,
+  TaskAttachment,
   TaskCategory,
   TaskDifficulty,
 } from "@/lib/types";
+import { formatFileSize, uploadToCloudinary } from "@/lib/cloudinary";
+import { getFirebaseAuthErrorMessage } from "@/lib/firebase";
 import { StatsCard } from "@/components/StatsCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { AdvertisementBanner } from "@/components/AdvertisementBanner";
@@ -82,6 +90,7 @@ export default function AdminDashboardPage() {
     transactions,
     referrals,
     ads,
+    createAdminAccount,
     createTask,
     updateTask,
     deleteTask,
@@ -114,10 +123,31 @@ export default function AdminDashboardPage() {
   const [taskAttachmentName, setTaskAttachmentName] = useState(
     "Scanned_Batch_Document.png"
   );
+  const [taskAttachmentType, setTaskAttachmentType] =
+    useState<TaskAttachment["type"]>("image");
+  const [taskAttachmentSize, setTaskAttachmentSize] = useState("1.1 MB");
+  const [taskAttachmentUrl, setTaskAttachmentUrl] = useState<string>("");
+  const [taskCloudinaryId, setTaskCloudinaryId] = useState<string>("");
+  const [isUploadingTaskFile, setIsUploadingTaskFile] = useState(false);
+  const [taskUploadError, setTaskUploadError] = useState<string | null>(null);
+  const [taskSampleContentText, setTaskSampleContentText] = useState(
+    "1. Contact: info@kenyabusiness.co.ke | Tel: 0722 000 111\n2. Record verified for extraction."
+  );
   const [taskInstructionsText, setTaskInstructionsText] = useState(
-    "Download the attached file.\nExtract all required records accurately.\nSubmit your structured answer for review."
+    "Download or preview the attached file.\nExtract all required records accurately.\nSubmit your structured answer for review."
   );
   const [taskToast, setTaskToast] = useState<string | null>(null);
+
+  // Create Admin Account State
+  const [adminFullName, setAdminFullName] = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPhone, setAdminPhone] = useState("0712345678");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
+  const [adminFormStatus, setAdminFormStatus] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
   // Submission Review Modal State
   const [reviewingSub, setReviewingSub] = useState<Submission | null>(null);
@@ -169,8 +199,91 @@ export default function AdminDashboardPage() {
     setTaskDeadline(task.deadline);
     setTaskFormat(task.submissionFormat);
     setTaskAttachmentName(task.attachment.name);
+    setTaskAttachmentType(task.attachment.type);
+    setTaskAttachmentSize(task.attachment.size || "1.1 MB");
+    setTaskAttachmentUrl(task.attachment.previewUrl || "");
+    setTaskCloudinaryId(task.attachment.cloudinaryPublicId || "");
+    setTaskSampleContentText((task.attachment.sampleContent || []).join("\n"));
     setTaskInstructionsText(task.instructions.join("\n"));
     setActiveTab("create_task");
+  };
+
+  const handleTaskFileUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setTaskUploadError(null);
+    setIsUploadingTaskFile(true);
+    setTaskAttachmentName(file.name);
+    setTaskAttachmentSize(formatFileSize(file.size));
+
+    if (file.type.startsWith("video/")) {
+      setTaskAttachmentType("video");
+      if (taskCategory !== "Video Extraction") {
+        setTaskCategory("Video Extraction");
+      }
+    } else if (file.type.startsWith("image/")) {
+      setTaskAttachmentType("image");
+    } else if (file.type === "application/pdf") {
+      setTaskAttachmentType("pdf");
+    }
+
+    try {
+      const uploaded = await uploadToCloudinary(file, "wingpoll_tasks");
+      setTaskAttachmentUrl(uploaded.secureUrl);
+      setTaskCloudinaryId(uploaded.publicId);
+      setTaskAttachmentSize(formatFileSize(uploaded.bytes || file.size));
+      if (uploaded.resourceType === "video") {
+        setTaskAttachmentType("video");
+      } else if (uploaded.resourceType === "image") {
+        setTaskAttachmentType("image");
+      }
+    } catch (err) {
+      setTaskUploadError(
+        err instanceof Error
+          ? err.message
+          : "Failed to upload file to Cloudinary."
+      );
+    } finally {
+      setIsUploadingTaskFile(false);
+    }
+  };
+
+  const handleCreateAdminSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdminFormStatus(null);
+    if (!adminFullName.trim() || !adminEmail.trim() || !adminPassword.trim()) {
+      setAdminFormStatus({
+        type: "error",
+        message: "Please fill in full name, email, and password.",
+      });
+      return;
+    }
+    setIsCreatingAdmin(true);
+    try {
+      const createdAdmin = await createAdminAccount({
+        fullName: adminFullName,
+        email: adminEmail,
+        phone: adminPhone,
+        password: adminPassword,
+      });
+      setAdminFormStatus({
+        type: "success",
+        message: `Admin account created for ${createdAdmin.name} (${createdAdmin.email}) and saved to Firestore users table with role: admin.`,
+      });
+      setAdminFullName("");
+      setAdminEmail("");
+      setAdminPassword("");
+    } catch (err) {
+      setAdminFormStatus({
+        type: "error",
+        message: getFirebaseAuthErrorMessage(err),
+      });
+    } finally {
+      setIsCreatingAdmin(false);
+    }
   };
 
   const handleSaveTask = (e: React.FormEvent) => {
@@ -179,6 +292,30 @@ export default function AdminDashboardPage() {
       .split("\n")
       .map((l) => l.trim())
       .filter(Boolean);
+
+    const sampleContentList = taskSampleContentText
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    const attachmentObj: TaskAttachment = {
+      name:
+        taskAttachmentName ||
+        (taskAttachmentType === "video"
+          ? "Task_Source_Video.mp4"
+          : "Task_Source_File.png"),
+      size: taskAttachmentSize || "1.2 MB",
+      type: taskAttachmentType,
+      previewUrl: taskAttachmentUrl || undefined,
+      cloudinaryPublicId: taskCloudinaryId || undefined,
+      sampleContent:
+        sampleContentList.length > 0
+          ? sampleContentList
+          : [
+              `SAMPLE CONTENT FOR: ${taskTitle || "New Task"}`,
+              "1. Contact: info@kenyabusiness.co.ke | Tel: 0722 000 111",
+            ],
+    };
 
     if (editingTaskId) {
       updateTask(editingTaskId, {
@@ -195,17 +332,9 @@ export default function AdminDashboardPage() {
           instructionsList.length > 0
             ? instructionsList
             : ["Follow task instructions carefully."],
-        attachment: {
-          name: taskAttachmentName || "Task_Attachment.png",
-          size: "950 KB",
-          type: "image",
-          sampleContent: [
-            `Attachment Preview for ${taskTitle}`,
-            "Sample line 1: Verified record entry",
-          ],
-        },
+        attachment: attachmentObj,
       });
-      setTaskToast("Task updated successfully!");
+      setTaskToast("Task updated and saved to Firestore!");
       setEditingTaskId(null);
     } else {
       createTask({
@@ -226,21 +355,17 @@ export default function AdminDashboardPage() {
           instructionsList.length > 0
             ? instructionsList
             : ["Complete the task and submit for review."],
-        attachment: {
-          name: taskAttachmentName || "Task_Source_File.png",
-          size: "1.1 MB",
-          type: "image",
-          sampleContent: [
-            `SAMPLE CONTENT FOR: ${taskTitle || "New Task"}`,
-            "1. Contact: info@kenyabusiness.co.ke | Tel: 0722 000 111",
-          ],
-        },
+        attachment: attachmentObj,
       });
-      setTaskToast("New task created and published to marketplace!");
+      setTaskToast(
+        "New task created, uploaded to Cloudinary, and saved to Firestore!"
+      );
     }
 
     setTaskTitle("");
     setTaskDesc("");
+    setTaskAttachmentUrl("");
+    setTaskCloudinaryId("");
     setTimeout(() => {
       setTaskToast(null);
       setActiveTab("manage_tasks");
@@ -744,11 +869,22 @@ export default function AdminDashboardPage() {
                     </label>
                     <select
                       value={taskCategory}
-                      onChange={(e) =>
-                        setTaskCategory(e.target.value as TaskCategory)
-                      }
+                      onChange={(e) => {
+                        const cat = e.target.value as TaskCategory;
+                        setTaskCategory(cat);
+                        if (cat === "Video Extraction") {
+                          setTaskAttachmentType("video");
+                          setTaskAttachmentName("Business_Clip_Task.mp4");
+                          setTaskInstructionsText(
+                            "Watch the attached task video carefully.\nPause at key frames and extract all requested names, contacts, or figures from the video.\nEnter the extracted information into the submission form.\nSubmit your work for admin verification."
+                          );
+                        }
+                      }}
                       className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-md"
                     >
+                      <option value="Video Extraction">
+                        Video Extraction (Extract Info From Video)
+                      </option>
                       <option value="Email Extraction">Email Extraction</option>
                       <option value="Image to Text">Image to Text</option>
                       <option value="Data Entry">Data Entry</option>
@@ -862,15 +998,142 @@ export default function AdminDashboardPage() {
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Task Attachment File Name
+                      Attachment Media Type
                     </label>
-                    <input
-                      type="text"
-                      value={taskAttachmentName}
-                      onChange={(e) => setTaskAttachmentName(e.target.value)}
-                      placeholder="e.g. Directory_Scan_Batch2.png"
-                      className="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-md"
-                    />
+                    <select
+                      value={taskAttachmentType}
+                      onChange={(e) =>
+                        setTaskAttachmentType(
+                          e.target.value as TaskAttachment["type"]
+                        )
+                      }
+                      className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-md"
+                    >
+                      <option value="video">
+                        Video File (.mp4, .webm, .mov)
+                      </option>
+                      <option value="image">
+                        Image Scan (.png, .jpg, .webp)
+                      </option>
+                      <option value="pdf">PDF Document (.pdf)</option>
+                      <option value="document">Word / Text Document</option>
+                      <option value="spreadsheet">
+                        Spreadsheet (.xlsx, .csv)
+                      </option>
+                    </select>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Upload Task Attachment to Cloudinary (Video, Image, PDF,
+                      or Document)
+                    </label>
+                    <div className="border-2 border-dashed border-slate-300 rounded-lg p-5 bg-slate-50/70 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-md bg-white border border-slate-200 flex items-center justify-center text-[#16A34A] shrink-0">
+                            {taskAttachmentType === "video" ? (
+                              <Film className="w-5 h-5" />
+                            ) : (
+                              <Upload className="w-5 h-5" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-slate-800">
+                              {isUploadingTaskFile
+                                ? "Uploading media to Cloudinary (dp5j28dmc)..."
+                                : taskAttachmentUrl
+                                ? `Uploaded: ${taskAttachmentName} (${taskAttachmentSize})`
+                                : `Attachment Name: ${taskAttachmentName}`}
+                            </p>
+                            <p className="text-[11px] text-slate-500">
+                              {taskAttachmentUrl
+                                ? `Cloudinary URL: ${taskAttachmentUrl}`
+                                : "Upload a video, image, or document file to Cloudinary CDN"}
+                            </p>
+                          </div>
+                        </div>
+
+                        <label className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-semibold bg-[#16A34A] hover:bg-[#15803d] text-white rounded-md cursor-pointer shrink-0">
+                          {isUploadingTaskFile ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              <span>Uploading...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="w-3.5 h-3.5" />
+                              <span>Upload File to Cloudinary</span>
+                            </>
+                          )}
+                          <input
+                            type="file"
+                            disabled={isUploadingTaskFile}
+                            accept="video/*,image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
+                            onChange={handleTaskFileUpload}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+
+                      {taskUploadError && (
+                        <p className="text-xs text-red-600 font-medium">
+                          {taskUploadError}
+                        </p>
+                      )}
+
+                      {/* Live Preview of Uploaded Cloudinary Video or Image */}
+                      {taskAttachmentUrl && taskAttachmentType === "video" && (
+                        <div className="rounded-md overflow-hidden border border-slate-800 bg-black">
+                          <video
+                            src={taskAttachmentUrl}
+                            controls
+                            className="w-full max-h-60 object-contain"
+                          />
+                        </div>
+                      )}
+
+                      {taskAttachmentUrl && taskAttachmentType === "image" && (
+                        <div className="rounded-md overflow-hidden border border-slate-200 bg-white p-2">
+                          <img
+                            src={taskAttachmentUrl}
+                            alt={taskAttachmentName}
+                            className="max-h-56 object-contain mx-auto rounded"
+                          />
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-200/80">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                            Attachment Display File Name
+                          </label>
+                          <input
+                            type="text"
+                            value={taskAttachmentName}
+                            onChange={(e) =>
+                              setTaskAttachmentName(e.target.value)
+                            }
+                            placeholder="e.g. Product_Demo_Clip.mp4"
+                            className="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-md"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                            Direct Media URL (Auto-filled by Cloudinary)
+                          </label>
+                          <input
+                            type="text"
+                            value={taskAttachmentUrl}
+                            onChange={(e) =>
+                              setTaskAttachmentUrl(e.target.value)
+                            }
+                            placeholder="https://res.cloudinary.com/dp5j28dmc/..."
+                            className="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-md font-mono"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="sm:col-span-2">
@@ -882,6 +1145,20 @@ export default function AdminDashboardPage() {
                       value={taskInstructionsText}
                       onChange={(e) => setTaskInstructionsText(e.target.value)}
                       className="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-md"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Reference Keyframes / Sample Preview Notes (One line per
+                      entry)
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={taskSampleContentText}
+                      onChange={(e) => setTaskSampleContentText(e.target.value)}
+                      placeholder="[00:05] Speaker / Company details..."
+                      className="w-full px-3.5 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-md"
                     />
                   </div>
                 </div>
@@ -1024,17 +1301,129 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
-          {/* 5. MANAGE USERS */}
+          {/* 5. MANAGE USERS & CREATE ADMIN ACCOUNT */}
           {activeTab === "users" && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
                 <h2 className="text-lg font-bold text-slate-900">
-                  Manage Registered Earners
+                  Manage Users & Admin Accounts (Firestore Users Table)
                 </h2>
                 <p className="text-xs text-slate-500">
-                  View earner balances, completed task counts, M-Pesa phone
-                  numbers, and account status.
+                  Create new Admin accounts (saved to Firestore with{" "}
+                  <code className="font-mono text-[#14532D]">role: admin</code>
+                  ) and manage registered earners (
+                  <code className="font-mono text-slate-700">role: user</code>).
                 </p>
+              </div>
+
+              {/* Create New Admin Account Card */}
+              <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-4">
+                <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+                  <div className="w-8 h-8 rounded-md bg-[#F0FDF4] border border-emerald-200 flex items-center justify-center text-[#16A34A]">
+                    <UserPlus className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">
+                      Create New Admin Account
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      Creates a Firebase Authentication account and saves to the
+                      Firestore <code className="font-mono">users</code> table
+                      with <code className="font-mono">role: &quot;admin&quot;</code>
+                    </p>
+                  </div>
+                </div>
+
+                {adminFormStatus && (
+                  <div
+                    className={`p-3 rounded-md border text-xs font-medium ${
+                      adminFormStatus.type === "success"
+                        ? "bg-[#F0FDF4] border-emerald-200 text-[#14532D]"
+                        : "bg-red-50 border-red-200 text-red-700"
+                    }`}
+                  >
+                    {adminFormStatus.message}
+                  </div>
+                )}
+
+                <form
+                  onSubmit={handleCreateAdminSubmit}
+                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end"
+                >
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Admin Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={adminFullName}
+                      onChange={(e) => setAdminFullName(e.target.value)}
+                      placeholder="e.g. Sarah Njeri"
+                      className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-md"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Admin Email *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={adminEmail}
+                      onChange={(e) => setAdminEmail(e.target.value)}
+                      placeholder="admin2@wingpoll.co.ke"
+                      className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-md"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Phone Number
+                    </label>
+                    <input
+                      type="text"
+                      value={adminPhone}
+                      onChange={(e) => setAdminPhone(e.target.value)}
+                      placeholder="0712345678"
+                      className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-md"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Password (min 6 chars) *
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      minLength={6}
+                      value={adminPassword}
+                      onChange={(e) => setAdminPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-md"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isCreatingAdmin}
+                    className="py-2 px-4 bg-[#16A34A] hover:bg-[#15803d] text-white text-xs font-semibold rounded-md flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 h-[34px]"
+                  >
+                    {isCreatingAdmin ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Creating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-3.5 h-3.5" />
+                        <span>Create Admin</span>
+                      </>
+                    )}
+                  </button>
+                </form>
               </div>
 
               <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
@@ -1043,6 +1432,7 @@ export default function AdminDashboardPage() {
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                         <th className="py-3.5 px-4">User</th>
+                        <th className="py-3.5 px-4">Role</th>
                         <th className="py-3.5 px-4">M-Pesa Phone</th>
                         <th className="py-3.5 px-4">Available Balance</th>
                         <th className="py-3.5 px-4">Total Earned</th>
@@ -1060,6 +1450,17 @@ export default function AdminDashboardPage() {
                             </p>
                             <span className="text-[11px] text-slate-400">
                               {u.email}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                u.role === "admin"
+                                  ? "bg-[#14532D] text-white"
+                                  : "bg-slate-100 text-slate-700"
+                              }`}
+                            >
+                              {u.role === "admin" ? "Admin" : "User"}
                             </span>
                           </td>
                           <td className="py-3.5 px-4 font-mono text-slate-700">
@@ -1647,14 +2048,27 @@ export default function AdminDashboardPage() {
               )}
 
               {reviewingSub.submittedData.fileName && (
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-md flex items-center justify-between">
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-md flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 font-semibold text-slate-800">
                     <FileText className="w-4 h-4 text-[#16A34A]" />
                     <span>{reviewingSub.submittedData.fileName}</span>
                   </div>
-                  <span className="text-slate-400">
-                    {reviewingSub.submittedData.fileSize}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-400">
+                      {reviewingSub.submittedData.fileSize}
+                    </span>
+                    {reviewingSub.submittedData.fileUrl && (
+                      <a
+                        href={reviewingSub.submittedData.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold bg-[#16A34A] text-white rounded hover:bg-[#15803d]"
+                      >
+                        <span>Open File</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
                 </div>
               )}
 
