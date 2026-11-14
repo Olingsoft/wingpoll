@@ -111,6 +111,7 @@ export type TransactionStatus = "Completed" | "Processing" | "Failed" | "Pending
 
 export interface Transaction {
   id: string;
+  userId?: string;
   reference: string;
   date: string;
   description: string;
@@ -121,6 +122,9 @@ export interface Transaction {
 
 export interface ReferralRecord {
   id: string;
+  referrerId?: string;
+  referrerName?: string;
+  referrerCode?: string;
   referredName: string;
   referredPhone: string;
   registrationDate: string;
@@ -186,6 +190,7 @@ export interface UserProfile {
 
 export interface NotificationItem {
   id: string;
+  userId?: string;
   title: string;
   message: string;
   time: string;
