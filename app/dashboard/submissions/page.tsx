@@ -3,11 +3,13 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import {
+  CheckCircle2,
+  Edit3,
   Eye,
   FileText,
   MessageSquare,
-  RefreshCw,
   X,
+  XCircle,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { Submission, SubmissionStatus } from "@/lib/types";
@@ -23,13 +25,14 @@ const STATUS_FILTERS: ("All" | SubmissionStatus)[] = [
 ];
 
 export default function MySubmissionsPage() {
-  const { submissions, user } = useApp();
+  const { submissions, user, cancelSubmission } = useApp();
   const [selectedStatus, setSelectedStatus] = useState<
     "All" | SubmissionStatus
   >("All");
   const [activeSubmission, setActiveSubmission] = useState<Submission | null>(
     null
   );
+  const [cancelledBanner, setCancelledBanner] = useState<string | null>(null);
 
   const userSubmissions = submissions.filter((s) => s.userId === user.id);
 
@@ -70,6 +73,19 @@ export default function MySubmissionsPage() {
         </div>
       </div>
 
+      {cancelledBanner && (
+        <div className="p-3.5 rounded-lg bg-amber-50 border border-amber-200 text-xs font-semibold text-amber-900 flex items-center justify-between gap-2">
+          <span>{cancelledBanner}</span>
+          <button
+            type="button"
+            onClick={() => setCancelledBanner(null)}
+            className="text-amber-700 hover:text-amber-950 cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {filteredSubmissions.length === 0 ? (
         <EmptyState
           title="No submissions in this category"
@@ -95,9 +111,15 @@ export default function MySubmissionsPage() {
                     className="hover:bg-slate-50/80 transition-colors"
                   >
                     <td className="py-4 px-4">
-                      <p className="font-semibold text-slate-900">
-                        {sub.taskTitle}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-slate-900">
+                          {sub.taskTitle}
+                        </p>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#16A34A] text-white">
+                          <CheckCircle2 className="w-2.5 h-2.5" />
+                          Done
+                        </span>
+                      </div>
                       <span className="text-[11px] text-slate-500">
                         {sub.category} • Ref #{sub.id}
                       </span>
@@ -112,23 +134,38 @@ export default function MySubmissionsPage() {
                       <StatusBadge status={sub.status} />
                     </td>
                     <td className="py-4 px-4 text-right whitespace-nowrap">
-                      <div className="inline-flex items-center gap-2">
+                      <div className="inline-flex items-center gap-1.5">
                         <button
                           type="button"
                           onClick={() => setActiveSubmission(sub)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:border-[#16A34A] hover:text-[#16A34A] rounded-md transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:border-[#16A34A] hover:text-[#16A34A] rounded-md transition-colors cursor-pointer"
                         >
                           <Eye className="w-3.5 h-3.5" />
-                          <span>View Details</span>
+                          <span>Details</span>
                         </button>
-                        {sub.status === "Revision Required" && (
-                          <Link
-                            href={`/dashboard/tasks/${sub.taskId}`}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-white bg-[#16A34A] hover:bg-[#15803d] rounded-md"
-                          >
-                            <RefreshCw className="w-3 h-3" />
-                            <span>Revise</span>
-                          </Link>
+                        {sub.status !== "Approved" && (
+                          <>
+                            <Link
+                              href={`/dashboard/tasks/${sub.taskId}`}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-[#14532D] bg-[#F0FDF4] border border-emerald-200 hover:bg-emerald-100 rounded-md"
+                            >
+                              <Edit3 className="w-3 h-3 text-[#16A34A]" />
+                              <span>Edit</span>
+                            </Link>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                cancelSubmission(sub.id);
+                                setCancelledBanner(
+                                  `Aborted & cancelled submission for "${sub.taskTitle}". Task is unmarked as Done.`
+                                );
+                              }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 hover:bg-red-100 rounded-md cursor-pointer"
+                            >
+                              <XCircle className="w-3 h-3" />
+                              <span>Abort / Cancel</span>
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>
@@ -274,13 +311,37 @@ export default function MySubmissionsPage() {
               </div>
             </div>
 
-            <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-              <Link
-                href={`/dashboard/tasks/${activeSubmission.taskId}`}
-                className="text-xs font-semibold text-[#16A34A] hover:underline"
-              >
-                Open Task Page →
-              </Link>
+            <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Link
+                  href={`/dashboard/tasks/${activeSubmission.taskId}`}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-[#14532D] bg-[#F0FDF4] border border-emerald-200 hover:bg-emerald-100 rounded-md"
+                >
+                  <Edit3 className="w-3.5 h-3.5 text-[#16A34A]" />
+                  <span>
+                    {activeSubmission.status === "Approved"
+                      ? "Open Task Page"
+                      : "Edit Submission"}
+                  </span>
+                </Link>
+                {activeSubmission.status !== "Approved" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const title = activeSubmission.taskTitle;
+                      cancelSubmission(activeSubmission.id);
+                      setActiveSubmission(null);
+                      setCancelledBanner(
+                        `Aborted & cancelled submission for "${title}". Task is unmarked as Done.`
+                      );
+                    }}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 hover:bg-red-100 rounded-md cursor-pointer"
+                  >
+                    <XCircle className="w-3.5 h-3.5" />
+                    <span>Abort / Cancel</span>
+                  </button>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={() => setActiveSubmission(null)}

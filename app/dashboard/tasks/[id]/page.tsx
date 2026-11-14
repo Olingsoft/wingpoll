@@ -658,273 +658,475 @@ export default function TaskDetailsPage() {
           {/* Sponsored Ad Below Task Instructions (Clearly Distinguished) */}
           <AdvertisementBanner position="task_instructions_below" />
 
-          {/* Task Submission Form */}
-          <div className="bg-white border border-slate-200 rounded-lg p-5 sm:p-6 space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100">
-              <div>
-                <h2 className="text-base font-semibold text-slate-900">
-                  Submit Your Completed Work
-                </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Complete the required submission format below and submit for
-                  verification.
-                </p>
-              </div>
-            </div>
-
-            {/* Format Switcher Tabs (Supports all 6 required formats) */}
-            <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                Submission Format Mode
-              </label>
-              <div className="flex flex-wrap gap-1.5">
-                {FORMAT_LABELS.map((fmt) => (
-                  <button
-                    key={fmt.id}
-                    type="button"
-                    onClick={() => {
-                      setActiveFormat(fmt.id);
-                      setValidationError(null);
-                    }}
-                    className={`px-2.5 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer ${
-                      activeFormat === fmt.id
-                        ? "bg-[#14532D] text-white"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                    }`}
-                  >
-                    {fmt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {validationError && (
-              <div className="p-3 rounded-md bg-red-50 border border-red-200 text-xs text-red-700 font-medium">
-                {validationError}
-              </div>
-            )}
-
-            <form onSubmit={handlePreSubmit} className="space-y-4">
-              {/* 1. Single Text Input */}
-              {activeFormat === "text_input" && (
+          {/* Task Submission Form OR Submitted Work Summary */}
+          {existingSubmission && !isEditingSubmission ? (
+            <div className="bg-white border border-emerald-300 rounded-lg p-5 sm:p-6 space-y-5 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Extracted Text Answer *
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-bold bg-[#16A34A] text-white">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Task Marked as Done
+                    </span>
+                    <StatusBadge status={existingSubmission.status} />
+                  </div>
+                  <h2 className="text-base font-bold text-slate-900 mt-2">
+                    Your Submitted Work
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Submitted on {existingSubmission.submittedAt} • Format:{" "}
+                    {existingSubmission.submittedData.format.replace(/_/g, " ")}
+                  </p>
+                </div>
+
+                {existingSubmission.status !== "Approved" && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleStartEditSubmission}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold bg-[#F0FDF4] border border-emerald-300 text-[#14532D] hover:bg-emerald-100 rounded-md cursor-pointer"
+                    >
+                      <Edit3 className="w-3.5 h-3.5 text-[#16A34A]" />
+                      <span>Edit Submission</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAbortConfirmOpen(true)}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 rounded-md cursor-pointer"
+                    >
+                      <XCircle className="w-3.5 h-3.5" />
+                      <span>Abort / Cancel Submission</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {existingSubmission.feedback && (
+                <div className="p-3.5 rounded-md bg-amber-50 border border-amber-200 text-xs text-amber-900">
+                  <span className="font-bold block mb-1">
+                    Admin Reviewer Feedback:
+                  </span>
+                  {existingSubmission.feedback}
+                </div>
+              )}
+
+              {existingSubmission.submittedData.textAnswer && (
+                <div>
+                  <span className="text-xs font-semibold text-slate-700 block mb-1.5">
+                    Submitted Text Answer:
+                  </span>
+                  <pre className="p-3.5 bg-slate-900 text-slate-100 rounded-md text-xs font-mono whitespace-pre-wrap">
+                    {existingSubmission.submittedData.textAnswer}
+                  </pre>
+                </div>
+              )}
+
+              {existingSubmission.submittedData.tableRows &&
+                existingSubmission.submittedData.tableRows.length > 0 && (
+                  <div>
+                    <span className="text-xs font-semibold text-slate-700 block mb-1.5">
+                      Submitted Structured Table Rows:
+                    </span>
+                    <div className="border border-slate-200 rounded-md overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-semibold text-slate-600">
+                            {Object.keys(
+                              existingSubmission.submittedData.tableRows[0]
+                            ).map((col) => (
+                              <th key={col} className="py-2 px-3">
+                                {col}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {existingSubmission.submittedData.tableRows.map(
+                            (row, idx) => (
+                              <tr key={idx}>
+                                {Object.values(row).map((val, cIdx) => (
+                                  <td
+                                    key={cIdx}
+                                    className="py-2 px-3 text-slate-700"
+                                  >
+                                    {val || "—"}
+                                  </td>
+                                ))}
+                              </tr>
+                            )
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+              {existingSubmission.submittedData.fieldValues && (
+                <div>
+                  <span className="text-xs font-semibold text-slate-700 block mb-1.5">
+                    Submitted Extracted Fields:
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 bg-slate-50 p-3.5 rounded-md border border-slate-200 text-xs">
+                    {Object.entries(
+                      existingSubmission.submittedData.fieldValues
+                    ).map(([key, value]) => (
+                      <div key={key}>
+                        <span className="text-[11px] text-slate-400 uppercase font-semibold block">
+                          {key}
+                        </span>
+                        <span className="font-medium text-slate-900">
+                          {value || "—"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {existingSubmission.submittedData.fileName && (
+                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-md flex items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2 font-semibold text-slate-800">
+                    <FileText className="w-4 h-4 text-[#16A34A]" />
+                    <span>{existingSubmission.submittedData.fileName}</span>
+                    {existingSubmission.submittedData.fileSize && (
+                      <span className="text-slate-400 font-normal">
+                        ({existingSubmission.submittedData.fileSize})
+                      </span>
+                    )}
+                  </div>
+                  {existingSubmission.submittedData.fileUrl && (
+                    <a
+                      href={existingSubmission.submittedData.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2.5 py-1 text-xs font-semibold bg-[#16A34A] text-white rounded hover:bg-[#15803d]"
+                    >
+                      View Uploaded File
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {existingSubmission.submittedData.notes && (
+                <div className="text-xs text-slate-600 bg-slate-50 p-3 rounded-md border border-slate-200">
+                  <span className="font-semibold text-slate-800">Notes: </span>
+                  {existingSubmission.submittedData.notes}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="bg-white border border-slate-200 rounded-lg p-5 sm:p-6 space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100">
+                <div>
+                  <h2 className="text-base font-semibold text-slate-900">
+                    {isEditingSubmission
+                      ? "Edit Your Submitted Work"
+                      : "Submit Your Completed Work"}
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {isEditingSubmission
+                      ? "Update your answers or file below and save your changes."
+                      : "Complete the required submission format below and submit for verification."}
+                  </p>
+                </div>
+
+                {isEditingSubmission && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingSubmission(false)}
+                      className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md cursor-pointer"
+                    >
+                      Cancel Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAbortConfirmOpen(true)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 hover:bg-red-100 rounded-md cursor-pointer"
+                    >
+                      <XCircle className="w-3.5 h-3.5" />
+                      <span>Abort / Cancel Submission</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Format Switcher Tabs (Supports all 6 required formats) */}
+              <div>
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                  Submission Format Mode
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {FORMAT_LABELS.map((fmt) => (
+                    <button
+                      key={fmt.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveFormat(fmt.id);
+                        setValidationError(null);
+                      }}
+                      className={`px-2.5 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer ${
+                        activeFormat === fmt.id
+                          ? "bg-[#14532D] text-white"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
+                    >
+                      {fmt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {validationError && (
+                <div className="p-3 rounded-md bg-red-50 border border-red-200 text-xs text-red-700 font-medium">
+                  {validationError}
+                </div>
+              )}
+
+              <form onSubmit={handlePreSubmit} className="space-y-4">
+                {/* 1. Single Text Input */}
+                {activeFormat === "text_input" && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Extracted Text Answer *
+                    </label>
+                    <input
+                      type="text"
+                      value={singleText}
+                      onChange={(e) => setSingleText(e.target.value)}
+                      placeholder="Enter the extracted information here..."
+                      className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-md focus:outline-none focus:bg-white focus:border-[#16A34A]"
+                    />
+                  </div>
+                )}
+
+                {/* 2. Multiline Text Area */}
+                {activeFormat === "multiline_text" && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Extracted Items / Full Transcription (One per line) *
+                    </label>
+                    <textarea
+                      rows={6}
+                      value={multilineText}
+                      onChange={(e) => setMultilineText(e.target.value)}
+                      placeholder={
+                        task.category === "Email Extraction"
+                          ? "info@savannalogistics.co.ke\norders@kilimanifresh.co.ke\n..."
+                          : "Type the transcribed text or extracted lines here..."
+                      }
+                      className="w-full px-3.5 py-2.5 text-sm font-mono bg-slate-50 border border-slate-200 rounded-md focus:outline-none focus:bg-white focus:border-[#16A34A]"
+                    />
+                  </div>
+                )}
+
+                {/* 3. Structured Table Entry */}
+                {activeFormat === "structured_table" && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-semibold text-slate-700">
+                        Structured Table Data Entry *
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleAddTableRow}
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-[#16A34A] hover:text-[#14532D] cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Row</span>
+                      </button>
+                    </div>
+
+                    <div className="border border-slate-200 rounded-md overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-semibold text-slate-600">
+                            <th className="py-2.5 px-3 w-10">#</th>
+                            {defaultColumns.map((col) => (
+                              <th key={col} className="py-2.5 px-3">
+                                {col}
+                              </th>
+                            ))}
+                            <th className="py-2.5 px-3 w-10"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 text-xs">
+                          {tableRows.map((row, rIdx) => (
+                            <tr key={rIdx}>
+                              <td className="py-2 px-3 text-slate-400 font-mono">
+                                {rIdx + 1}
+                              </td>
+                              {defaultColumns.map((col) => (
+                                <td key={col} className="p-1.5">
+                                  <input
+                                    type="text"
+                                    value={row[col] || ""}
+                                    onChange={(e) =>
+                                      handleTableCellChange(
+                                        rIdx,
+                                        col,
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder={`Enter ${col}`}
+                                    className="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded focus:outline-none focus:bg-white focus:border-[#16A34A]"
+                                  />
+                                </td>
+                              ))}
+                              <td className="p-1.5 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveTableRow(rIdx)}
+                                  className="text-slate-400 hover:text-red-600 p-1 cursor-pointer"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* 4. Multiple Input Fields */}
+                {activeFormat === "multiple_fields" && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {defaultFields.map((field) => (
+                      <div
+                        key={field.id}
+                        className={
+                          field.id === "dispatchRemarks" ||
+                          field.id === "summaryRemarks"
+                            ? "sm:col-span-2"
+                            : ""
+                        }
+                      >
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                          {field.label} {field.required && "*"}
+                        </label>
+                        <input
+                          type="text"
+                          value={fieldValues[field.id] || ""}
+                          onChange={(e) =>
+                            setFieldValues((prev) => ({
+                              ...prev,
+                              [field.id]: e.target.value,
+                            }))
+                          }
+                          placeholder={field.placeholder}
+                          className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-md focus:outline-none focus:bg-white focus:border-[#16A34A]"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* 5 & 6. File Upload / PDF Upload */}
+                {(activeFormat === "file_upload" ||
+                  activeFormat === "pdf_upload") && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      {activeFormat === "pdf_upload"
+                        ? "Upload Formatted PDF Document (.pdf) *"
+                        : "Upload Completed Task File (.docx, .xlsx, .csv) *"}
+                    </label>
+                    <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center bg-slate-50/60 hover:border-[#16A34A] transition-colors">
+                      <Upload className="w-7 h-7 text-[#16A34A] mx-auto mb-2" />
+                      <p className="text-xs font-semibold text-slate-800">
+                        {isUploadingToCloudinary
+                          ? "Uploading file to Cloudinary..."
+                          : selectedFile
+                          ? `Uploaded: ${selectedFile.name} (${selectedFile.size})`
+                          : "Select a file from your device to upload to Cloudinary"}
+                      </p>
+                      {selectedFile?.url && (
+                        <p className="text-[11px] text-[#16A34A] font-medium mt-1">
+                          ✓ Saved on Cloudinary CDN
+                        </p>
+                      )}
+                      <p className="text-[11px] text-slate-500 mt-1 mb-3">
+                        {activeFormat === "pdf_upload"
+                          ? "Accepted format: PDF up to 10 MB"
+                          : "Accepted formats: DOCX, XLSX, CSV, TXT, PDF up to 10 MB"}
+                      </p>
+                      <div className="flex items-center justify-center gap-2">
+                        <label className="px-3.5 py-1.5 text-xs font-semibold bg-white border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50 cursor-pointer inline-flex items-center gap-1.5">
+                          {isUploadingToCloudinary && (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-[#16A34A]" />
+                          )}
+                          <span>
+                            {isUploadingToCloudinary
+                              ? "Uploading..."
+                              : "Choose & Upload File"}
+                          </span>
+                          <input
+                            type="file"
+                            disabled={isUploadingToCloudinary}
+                            accept={
+                              activeFormat === "pdf_upload"
+                                ? ".pdf"
+                                : ".doc,.docx,.xls,.xlsx,.csv,.txt,.pdf"
+                            }
+                            onChange={handleFileChange}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Optional Earner Notes */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Additional Reviewer Notes{" "}
+                    <span className="font-normal text-slate-400">(Optional)</span>
                   </label>
                   <input
                     type="text"
-                    value={singleText}
-                    onChange={(e) => setSingleText(e.target.value)}
-                    placeholder="Enter the extracted information here..."
-                    className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-md focus:outline-none focus:bg-white focus:border-[#16A34A]"
+                    value={optionalNotes}
+                    onChange={(e) => setOptionalNotes(e.target.value)}
+                    placeholder="Any comments for the quality reviewer..."
+                    className="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-md focus:outline-none focus:bg-white focus:border-[#16A34A]"
                   />
                 </div>
-              )}
 
-              {/* 2. Multiline Text Area */}
-              {activeFormat === "multiline_text" && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Extracted Items / Full Transcription (One per line) *
-                  </label>
-                  <textarea
-                    rows={6}
-                    value={multilineText}
-                    onChange={(e) => setMultilineText(e.target.value)}
-                    placeholder={
-                      task.category === "Email Extraction"
-                        ? "info@savannalogistics.co.ke\norders@kilimanifresh.co.ke\n..."
-                        : "Type the transcribed text or extracted lines here..."
-                    }
-                    className="w-full px-3.5 py-2.5 text-sm font-mono bg-slate-50 border border-slate-200 rounded-md focus:outline-none focus:bg-white focus:border-[#16A34A]"
-                  />
-                </div>
-              )}
-
-              {/* 3. Structured Table Entry */}
-              {activeFormat === "structured_table" && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-xs font-semibold text-slate-700">
-                      Structured Table Data Entry *
-                    </label>
+                <div className="pt-2 flex flex-wrap items-center justify-between gap-3">
+                  {isEditingSubmission ? (
                     <button
                       type="button"
-                      onClick={handleAddTableRow}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-[#16A34A] hover:text-[#14532D] cursor-pointer"
+                      onClick={() => setIsEditingSubmission(false)}
+                      className="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md cursor-pointer"
                     >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Add Row</span>
+                      Cancel Edit
                     </button>
-                  </div>
-
-                  <div className="border border-slate-200 rounded-md overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-semibold text-slate-600">
-                          <th className="py-2.5 px-3 w-10">#</th>
-                          {defaultColumns.map((col) => (
-                            <th key={col} className="py-2.5 px-3">
-                              {col}
-                            </th>
-                          ))}
-                          <th className="py-2.5 px-3 w-10"></th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 text-xs">
-                        {tableRows.map((row, rIdx) => (
-                          <tr key={rIdx}>
-                            <td className="py-2 px-3 text-slate-400 font-mono">
-                              {rIdx + 1}
-                            </td>
-                            {defaultColumns.map((col) => (
-                              <td key={col} className="p-1.5">
-                                <input
-                                  type="text"
-                                  value={row[col] || ""}
-                                  onChange={(e) =>
-                                    handleTableCellChange(
-                                      rIdx,
-                                      col,
-                                      e.target.value
-                                    )
-                                  }
-                                  placeholder={`Enter ${col}`}
-                                  className="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded focus:outline-none focus:bg-white focus:border-[#16A34A]"
-                                />
-                              </td>
-                            ))}
-                            <td className="p-1.5 text-center">
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveTableRow(rIdx)}
-                                className="text-slate-400 hover:text-red-600 p-1 cursor-pointer"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* 4. Multiple Input Fields */}
-              {activeFormat === "multiple_fields" && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {defaultFields.map((field) => (
-                    <div
-                      key={field.id}
-                      className={
-                        field.id === "dispatchRemarks" ||
-                        field.id === "summaryRemarks"
-                          ? "sm:col-span-2"
-                          : ""
-                      }
+                  ) : (
+                    <Link
+                      href="/dashboard/tasks"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md"
                     >
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        {field.label} {field.required && "*"}
-                      </label>
-                      <input
-                        type="text"
-                        value={fieldValues[field.id] || ""}
-                        onChange={(e) =>
-                          setFieldValues((prev) => ({
-                            ...prev,
-                            [field.id]: e.target.value,
-                          }))
-                        }
-                        placeholder={field.placeholder}
-                        className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-md focus:outline-none focus:bg-white focus:border-[#16A34A]"
-                      />
-                    </div>
-                  ))}
+                      <XCircle className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Abort / Cancel Task</span>
+                    </Link>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="inline-flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-semibold text-white bg-[#16A34A] hover:bg-[#15803d] rounded-md transition-colors cursor-pointer"
+                  >
+                    <Send className="w-4 h-4" />
+                    <span>
+                      {isEditingSubmission
+                        ? "Save Updated Submission"
+                        : "Submit Task for Review"}
+                    </span>
+                  </button>
                 </div>
-              )}
-
-              {/* 5 & 6. File Upload / PDF Upload */}
-              {(activeFormat === "file_upload" ||
-                activeFormat === "pdf_upload") && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    {activeFormat === "pdf_upload"
-                      ? "Upload Formatted PDF Document (.pdf) *"
-                      : "Upload Completed Task File (.docx, .xlsx, .csv) *"}
-                  </label>
-                  <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center bg-slate-50/60 hover:border-[#16A34A] transition-colors">
-                    <Upload className="w-7 h-7 text-[#16A34A] mx-auto mb-2" />
-                    <p className="text-xs font-semibold text-slate-800">
-                      {isUploadingToCloudinary
-                        ? "Uploading file to Cloudinary..."
-                        : selectedFile
-                        ? `Uploaded: ${selectedFile.name} (${selectedFile.size})`
-                        : "Select a file from your device to upload to Cloudinary"}
-                    </p>
-                    {selectedFile?.url && (
-                      <p className="text-[11px] text-[#16A34A] font-medium mt-1">
-                        ✓ Saved on Cloudinary CDN
-                      </p>
-                    )}
-                    <p className="text-[11px] text-slate-500 mt-1 mb-3">
-                      {activeFormat === "pdf_upload"
-                        ? "Accepted format: PDF up to 10 MB"
-                        : "Accepted formats: DOCX, XLSX, CSV, TXT, PDF up to 10 MB"}
-                    </p>
-                    <div className="flex items-center justify-center gap-2">
-                      <label className="px-3.5 py-1.5 text-xs font-semibold bg-white border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50 cursor-pointer inline-flex items-center gap-1.5">
-                        {isUploadingToCloudinary && (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-[#16A34A]" />
-                        )}
-                        <span>
-                          {isUploadingToCloudinary
-                            ? "Uploading..."
-                            : "Choose & Upload File"}
-                        </span>
-                        <input
-                          type="file"
-                          disabled={isUploadingToCloudinary}
-                          accept={
-                            activeFormat === "pdf_upload"
-                              ? ".pdf"
-                              : ".doc,.docx,.xls,.xlsx,.csv,.txt,.pdf"
-                          }
-                          onChange={handleFileChange}
-                          className="hidden"
-                        />
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Optional Earner Notes */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Additional Reviewer Notes{" "}
-                  <span className="font-normal text-slate-400">(Optional)</span>
-                </label>
-                <input
-                  type="text"
-                  value={optionalNotes}
-                  onChange={(e) => setOptionalNotes(e.target.value)}
-                  placeholder="Any comments for the quality reviewer..."
-                  className="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-md focus:outline-none focus:bg-white focus:border-[#16A34A]"
-                />
-              </div>
-
-              <div className="pt-2 flex items-center justify-end">
-                <button
-                  type="submit"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-semibold text-white bg-[#16A34A] hover:bg-[#15803d] rounded-md transition-colors cursor-pointer"
-                >
-                  <Send className="w-4 h-4" />
-                  <span>Submit Task for Review</span>
-                </button>
-              </div>
-            </form>
-          </div>
+              </form>
+            </div>
+          )}
         </div>
 
         {/* Right Column: Quality Checklist + Sidebar Sponsored Ad */}
@@ -967,21 +1169,51 @@ export default function TaskDetailsPage() {
         </div>
       </div>
 
-      {/* Confirmation Modal */}
+      {/* Submit / Update Confirmation Modal */}
       <ConfirmationModal
         isOpen={confirmModalOpen}
         onClose={() => setConfirmModalOpen(false)}
         onConfirm={handleConfirmSubmission}
-        title="Confirm Task Submission"
-        description="Are you sure you are ready to submit your completed work for quality review? Make sure all extracted entries are accurate."
-        confirmLabel="Confirm & Submit Work"
+        title={
+          isEditingSubmission
+            ? "Confirm Updated Submission"
+            : "Confirm Task Submission"
+        }
+        description={
+          isEditingSubmission
+            ? "Save your updated submission changes and send for quality review?"
+            : "Are you sure you are ready to submit your completed work for quality review? Make sure all extracted entries are accurate."
+        }
+        confirmLabel={
+          isEditingSubmission
+            ? "Save Updated Submission"
+            : "Confirm & Submit Work"
+        }
         summaryItems={[
           { label: "Task Title", value: task.title },
           { label: "Category", value: task.category },
           { label: "Reward Amount", value: `KSh ${task.reward}` },
           {
             label: "Status After Submit",
-            value: "Pending Review",
+            value: "Done • Pending Review",
+          },
+        ]}
+      />
+
+      {/* Abort / Cancel Submission Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={abortConfirmOpen}
+        onClose={() => setAbortConfirmOpen(false)}
+        onConfirm={handleAbortSubmission}
+        title="Abort / Cancel Submission"
+        description="Are you sure you want to abort and cancel this submission? The task will be unmarked as Done and removed from the review queue."
+        confirmLabel="Yes, Abort & Cancel Submission"
+        summaryItems={[
+          { label: "Task Title", value: task.title },
+          { label: "Reward", value: `KSh ${task.reward}` },
+          {
+            label: "Action",
+            value: "Cancel submission & unmark task as Done",
           },
         ]}
       />
