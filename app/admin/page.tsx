@@ -239,7 +239,13 @@ export default function AdminDashboardPage() {
       setTaskAttachmentUrl(uploaded.secureUrl);
       setTaskCloudinaryId(uploaded.publicId);
       setTaskAttachmentSize(formatFileSize(uploaded.bytes || file.size));
-      if (uploaded.resourceType === "video") {
+      if (
+        file.type === "application/pdf" ||
+        file.name.toLowerCase().endsWith(".pdf") ||
+        uploaded.format === "pdf"
+      ) {
+        setTaskAttachmentType("pdf");
+      } else if (uploaded.resourceType === "video") {
         setTaskAttachmentType("video");
       } else if (uploaded.resourceType === "image") {
         setTaskAttachmentType("image");
@@ -1207,6 +1213,16 @@ export default function AdminDashboardPage() {
                             src={taskAttachmentUrl}
                             alt={taskAttachmentName}
                             className="max-h-56 object-contain mx-auto rounded"
+                          />
+                        </div>
+                      )}
+
+                      {taskAttachmentUrl && taskAttachmentType === "pdf" && (
+                        <div className="rounded-md overflow-hidden border border-slate-200 bg-white">
+                          <iframe
+                            src={`${taskAttachmentUrl}#toolbar=1&navpanes=0`}
+                            title={taskAttachmentName}
+                            className="w-full h-72 bg-white"
                           />
                         </div>
                       )}

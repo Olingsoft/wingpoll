@@ -8,7 +8,6 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
-  Download,
   Eye,
   FileSpreadsheet,
   FileText,
@@ -16,6 +15,8 @@ import {
   Image as ImageIcon,
   Layers,
   Loader2,
+  Maximize2,
+  Minimize2,
   Plus,
   Send,
   Trash2,
@@ -51,7 +52,7 @@ export default function TaskDetailsPage() {
   const [activeFormat, setActiveFormat] = useState<SubmissionFormat>(
     task?.submissionFormat || "multiline_text"
   );
-  const [downloadedNotice, setDownloadedNotice] = useState(false);
+  const [imageZoomed, setImageZoomed] = useState(false);
 
   // Form states for the 6 formats
   const [singleText, setSingleText] = useState("");
@@ -107,31 +108,6 @@ export default function TaskDetailsPage() {
   const [justSubmittedStatus, setJustSubmittedStatus] = useState<string | null>(
     null
   );
-
-  const handleDownloadAttachment = () => {
-    setDownloadedNotice(true);
-    if (task.attachment.previewUrl) {
-      window.open(task.attachment.previewUrl, "_blank", "noopener,noreferrer");
-      return;
-    }
-    const content = [
-      `WINGPOLL TASK ATTACHMENT: ${task.attachment.name}`,
-      `Task: ${task.title} (Reward: KSh ${task.reward})`,
-      "--------------------------------------------------",
-      ...(task.attachment.sampleContent || []),
-    ].join("\n");
-
-    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = task.attachment.name.replace(
-      /\.(png|jpg|docx|csv|mp4|webm)$/i,
-      ".txt"
-    );
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
   const handleAddTableRow = () => {
     setTableRows((prev) => [
@@ -392,109 +368,145 @@ export default function TaskDetailsPage() {
               </ol>
             </div>
 
-            {/* Download Attachment Bar */}
-            <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-md bg-white border border-slate-200 flex items-center justify-center text-[#16A34A]">
-                  {task.attachment.type === "video" ? (
-                    <Film className="w-5 h-5" />
-                  ) : task.attachment.type === "image" ? (
-                    <ImageIcon className="w-5 h-5" />
-                  ) : task.attachment.type === "spreadsheet" ? (
-                    <FileSpreadsheet className="w-5 h-5" />
-                  ) : (
-                    <FileText className="w-5 h-5" />
+            {/* Inline Task Source File Preview (PDF, Image, Video, or Document) */}
+            <div className="space-y-3 pt-2 border-t border-slate-100">
+              <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-md bg-white border border-slate-200 flex items-center justify-center text-[#16A34A] shrink-0">
+                    {task.attachment.type === "video" ? (
+                      <Film className="w-4 h-4" />
+                    ) : task.attachment.type === "image" ? (
+                      <ImageIcon className="w-4 h-4" />
+                    ) : task.attachment.type === "spreadsheet" ? (
+                      <FileSpreadsheet className="w-4 h-4" />
+                    ) : (
+                      <FileText className="w-4 h-4" />
+                    )}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-900">
+                        <Eye className="w-3.5 h-3.5 text-[#16A34A]" />
+                        Task Source Material: {task.attachment.name}
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-[#F0FDF4] border border-emerald-200 text-[10px] font-bold uppercase text-[#14532D]">
+                        {task.attachment.type}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      Work directly from the live preview below ({task.attachment.size})
+                    </p>
+                  </div>
+                </div>
+
+                {task.attachment.type === "image" &&
+                  task.attachment.previewUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setImageZoomed((prev) => !prev)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-white border border-slate-300 rounded-md text-slate-700 hover:bg-slate-100 cursor-pointer"
+                    >
+                      {imageZoomed ? (
+                        <>
+                          <Minimize2 className="w-3.5 h-3.5 text-[#16A34A]" />
+                          <span>Fit to Screen</span>
+                        </>
+                      ) : (
+                        <>
+                          <Maximize2 className="w-3.5 h-3.5 text-[#16A34A]" />
+                          <span>Zoom Image</span>
+                        </>
+                      )}
+                    </button>
                   )}
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-slate-900">
-                    {task.attachment.name}
-                  </p>
-                  <p className="text-[11px] text-slate-500">
-                    File size: {task.attachment.size} •{" "}
-                    {task.attachment.type === "video"
-                      ? "Video Source (Extract Information From Video)"
-                      : "Source Attachment"}
-                  </p>
-                </div>
               </div>
 
-              <button
-                type="button"
-                onClick={handleDownloadAttachment}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#16A34A] hover:bg-[#15803d] rounded-md transition-colors cursor-pointer"
-              >
-                <Download className="w-4 h-4" />
-                <span>
-                  {downloadedNotice
-                    ? "Attachment Opened / Downloaded ✓"
-                    : task.attachment.previewUrl
-                    ? "Open / Download Media"
-                    : "Download Attachment"}
-                </span>
-              </button>
-            </div>
+              {/* 1. VIDEO PREVIEW */}
+              {(task.attachment.type === "video" ||
+                task.attachment.previewUrl?.match(/\.(mp4|webm|mov|ogg)(\?|$)/i)) &&
+                task.attachment.previewUrl && (
+                  <div className="rounded-lg overflow-hidden border border-slate-800 bg-black shadow-xs">
+                    <video
+                      src={task.attachment.previewUrl}
+                      controls
+                      preload="metadata"
+                      className="w-full max-h-[480px] object-contain bg-black"
+                    >
+                      Your browser does not support HTML5 video playback.
+                    </video>
+                  </div>
+                )}
 
-            {/* Reference Video / Image / Document Live Preview */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700">
-                  <Eye className="w-3.5 h-3.5 text-[#16A34A]" />
-                  {task.attachment.type === "video"
-                    ? "Task Video Player — Watch & Extract Information"
-                    : "Reference Attachment Preview"}
-                </span>
-                <span className="text-[11px] text-slate-400">
-                  {task.attachment.previewUrl
-                    ? "Hosted on Cloudinary CDN"
-                    : "Inspect content below to complete your task"}
-                </span>
-              </div>
+              {/* 2. IMAGE PREVIEW */}
+              {(task.attachment.type === "image" ||
+                task.attachment.previewUrl?.match(
+                  /\.(png|jpe?g|webp|gif|svg)(\?|$)/i
+                )) &&
+                task.attachment.type !== "pdf" &&
+                !task.attachment.previewUrl?.match(/\.pdf(\?|$)/i) &&
+                task.attachment.previewUrl && (
+                  <div className="rounded-lg overflow-auto border border-slate-200 bg-slate-100 p-3 max-h-[600px]">
+                    <img
+                      src={task.attachment.previewUrl}
+                      alt={task.attachment.name}
+                      className={`rounded mx-auto transition-all ${
+                        imageZoomed
+                          ? "w-[140%] max-w-none"
+                          : "w-full max-h-[520px] object-contain"
+                      }`}
+                    />
+                  </div>
+                )}
 
-              {/* If Cloudinary Video URL is available, render real HTML5 Video Player */}
-              {task.attachment.type === "video" && task.attachment.previewUrl && (
-                <div className="rounded-lg overflow-hidden border border-slate-800 bg-black">
-                  <video
-                    src={task.attachment.previewUrl}
-                    controls
-                    preload="metadata"
-                    className="w-full max-h-96 object-contain bg-black"
-                  >
-                    Your browser does not support HTML5 video playback.
-                  </video>
-                </div>
-              )}
+              {/* 3. PDF PREVIEW */}
+              {(task.attachment.type === "pdf" ||
+                task.attachment.previewUrl?.match(/\.pdf(\?|$)/i)) &&
+                task.attachment.previewUrl && (
+                  <div className="rounded-lg overflow-hidden border border-slate-200 bg-slate-100">
+                    <iframe
+                      src={`${task.attachment.previewUrl}#toolbar=1&navpanes=0`}
+                      title={task.attachment.name}
+                      className="w-full h-[580px] bg-white"
+                    />
+                  </div>
+                )}
 
-              {/* If Cloudinary Image URL is available, render Image Preview */}
-              {task.attachment.type === "image" && task.attachment.previewUrl && (
-                <div className="rounded-lg overflow-hidden border border-slate-200 bg-slate-100 p-2">
-                  <img
-                    src={task.attachment.previewUrl}
-                    alt={task.attachment.name}
-                    className="w-full max-h-96 object-contain rounded mx-auto"
-                  />
-                </div>
-              )}
+              {/* 4. DOCUMENT / SPREADSHEET PREVIEW */}
+              {(task.attachment.type === "document" ||
+                task.attachment.type === "spreadsheet") &&
+                task.attachment.previewUrl && (
+                  <div className="rounded-lg overflow-hidden border border-slate-200 bg-slate-100">
+                    <iframe
+                      src={`https://docs.google.com/gview?url=${encodeURIComponent(
+                        task.attachment.previewUrl
+                      )}&embedded=true`}
+                      title={task.attachment.name}
+                      className="w-full h-[540px] bg-white"
+                    />
+                  </div>
+                )}
 
-              <div className="bg-slate-900 text-slate-100 rounded-lg p-4 sm:p-5 border border-slate-800 font-mono text-xs space-y-2 overflow-x-auto">
-                <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-700 text-[11px] text-slate-400">
-                  <span>
-                    {task.attachment.type === "video"
-                      ? `VIDEO KEYFRAMES / CAPTIONS: ${task.attachment.name}`
-                      : `PREVIEW: ${task.attachment.name}`}
-                  </span>
-                  <span className="text-emerald-400">
-                    {task.attachment.type === "video"
-                      ? "HD VIDEO STREAM"
-                      : "SCAN QUALITY: HIGH"}
-                  </span>
-                </div>
-                {(task.attachment.sampleContent || []).map((line, i) => (
-                  <p key={i} className="leading-relaxed text-slate-200">
-                    {line}
-                  </p>
-                ))}
-              </div>
+              {/* Text / Keyframe Reference Content (shown if provided or if no media URL) */}
+              {task.attachment.sampleContent &&
+                task.attachment.sampleContent.length > 0 && (
+                  <div className="bg-slate-900 text-slate-100 rounded-lg p-4 sm:p-5 border border-slate-800 font-mono text-xs space-y-2 overflow-x-auto">
+                    <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-700 text-[11px] text-slate-400">
+                      <span>
+                        {task.attachment.type === "video"
+                          ? `VIDEO NOTES / KEYFRAMES: ${task.attachment.name}`
+                          : `SOURCE CONTENT: ${task.attachment.name}`}
+                      </span>
+                      <span className="text-emerald-400">
+                        LIVE WORKSPACE PREVIEW
+                      </span>
+                    </div>
+                    {task.attachment.sampleContent.map((line, i) => (
+                      <p key={i} className="leading-relaxed text-slate-200">
+                        {line}
+                      </p>
+                    ))}
+                  </div>
+                )}
             </div>
           </div>
 
