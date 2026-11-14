@@ -15,9 +15,11 @@ import {
 } from "@/lib/types";
 import { INITIAL_USER } from "@/lib/mock-data";
 import {
+  adjustUserPendingEarningsInFirestore,
   auth,
   createAdminAccountInFirebase,
   deleteAdFromFirestore,
+  deleteSubmissionFromFirestore,
   deleteTaskFromFirestore,
   fetchAllAdsFromFirestore,
   fetchAllNotificationsFromFirestore,
@@ -28,6 +30,7 @@ import {
   fetchAllUsersFromFirestore,
   fetchAllWithdrawalsFromFirestore,
   FirebaseUser,
+  grantTaskRewardToUserInFirestore,
   logoutFirebase,
   onAuthStateChanged,
   reloadFirebaseUser,
@@ -62,6 +65,11 @@ interface AppContextType {
     taskId: string,
     submittedData: Submission["submittedData"]
   ) => Submission;
+  updateSubmission: (
+    submissionId: string,
+    submittedData: Submission["submittedData"]
+  ) => void;
+  cancelSubmission: (submissionId: string) => void;
   requestWithdrawal: (amount: number, mpesaNumber: string) => Withdrawal;
   updateUserProfile: (updates: Partial<UserProfile>) => void;
   markAllNotificationsRead: () => void;
@@ -249,6 +257,89 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return newSub;
   };
 
+  const updateSubmission = (
+    submissionId: string,
+    submittedData: Submission["submittedData"]
+  ) => {
+    const target = submissions.find((s) => s.id === submissionId);
+    if (!target) return;
+
+    const wasNotPending =
+      target.status === "Rejected" || target.status === "Revision Required";
+
+    setSubmissions((prev) =>
+      prev.map((s) => {
+        if (s.id === submissionId) {
+          const updated: Submission = {
+            ...s,
+            submittedAt: formatNowTimestamp(),
+            status: "Pending Review",
+            submittedData,
+          };
+          saveSubmissionToFirestore(updated);
+          return updated;
+        }
+        return s;
+      })
+    );
+
+    if (wasNotPending) {
+      const nextPending = user.pendingEarnings + target.reward;
+      setUser((prev) => ({
+        ...prev,
+        pendingEarnings: nextPending,
+      }));
+      if (user.id) {
+        updateUserInFirestore(user.id, { pendingEarnings: nextPending });
+      }
+    }
+
+    const newNotif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      userId: user.id,
+      title: "Submission Updated",
+      message: `Your updated submission for '${target.taskTitle}' has been saved and is Pending Review.`,
+      time: formatNowTimestamp(),
+      read: false,
+      type: "submission",
+    };
+    setNotifications((prev) => [newNotif, ...prev]);
+    saveNotificationToFirestore(newNotif);
+  };
+
+  const cancelSubmission = (submissionId: string) => {
+    const target = submissions.find((s) => s.id === submissionId);
+    if (!target || target.status === "Approved") return;
+
+    setSubmissions((prev) => prev.filter((s) => s.id !== submissionId));
+    deleteSubmissionFromFirestore(submissionId);
+
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t.id === target.taskId) {
+          const updatedTask = {
+            ...t,
+            availableSlots: Math.min(t.totalSlots, t.availableSlots + 1),
+          };
+          saveTaskToFirestore(updatedTask);
+          return updatedTask;
+        }
+        return t;
+      })
+    );
+
+    if (target.status === "Pending Review") {
+      const nextPending = Math.max(0, user.pendingEarnings - target.reward);
+      setUser((prev) => ({
+        ...prev,
+        pendingEarnings: nextPending,
+      }));
+      if (user.id) {
+        updateUserInFirestore(user.id, { pendingEarnings: nextPending });
+      }
+    }
+  };
+
   const requestWithdrawal = (
     amount: number,
     mpesaNumber: string
@@ -424,6 +515,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!target) return;
 
     const wasApproved = target.status === "Approved";
+    const wasPending = target.status === "Pending Review";
 
     setSubmissions((prev) =>
       prev.map((s) => {
@@ -442,37 +534,59 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     const earner = allUsers.find((u) => u.id === target.userId);
     if (status === "Approved" && !wasApproved) {
-      const updatedFields = {
-        availableBalance: (earner?.availableBalance ?? user.availableBalance) + target.reward,
-        totalEarnings: (earner?.totalEarnings ?? user.totalEarnings) + target.reward,
-        taskEarnings: (earner?.taskEarnings ?? user.taskEarnings) + target.reward,
-        pendingEarnings: Math.max(
-          0,
-          (earner?.pendingEarnings ?? user.pendingEarnings) - target.reward
-        ),
-        completedTasks: (earner?.completedTasks ?? user.completedTasks) + 1,
+      const localUpdatedFields = {
+        availableBalance: (earner?.availableBalance ?? 0) + target.reward,
+        totalEarnings: (earner?.totalEarnings ?? 0) + target.reward,
+        taskEarnings: (earner?.taskEarnings ?? 0) + target.reward,
+        pendingEarnings: wasPending
+          ? Math.max(0, (earner?.pendingEarnings ?? 0) - target.reward)
+          : earner?.pendingEarnings ?? 0,
+        completedTasks: (earner?.completedTasks ?? 0) + 1,
       };
 
-      updateUserInFirestore(target.userId, updatedFields);
       setAllUsers((prev) =>
         prev.map((u) =>
-          u.id === target.userId ? { ...u, ...updatedFields } : u
+          u.id === target.userId ? { ...u, ...localUpdatedFields } : u
         )
       );
 
       if (target.userId === user.id) {
         setUser((prev) => ({
           ...prev,
-          ...updatedFields,
+          availableBalance: prev.availableBalance + target.reward,
+          totalEarnings: prev.totalEarnings + target.reward,
+          taskEarnings: prev.taskEarnings + target.reward,
+          pendingEarnings: wasPending
+            ? Math.max(0, prev.pendingEarnings - target.reward)
+            : prev.pendingEarnings,
+          completedTasks: prev.completedTasks + 1,
         }));
       }
+
+      // Reliably read & credit earner's Firestore users/{userId} account
+      grantTaskRewardToUserInFirestore(
+        target.userId,
+        target.reward,
+        wasPending
+      ).then((firestoreFields) => {
+        if (firestoreFields) {
+          setAllUsers((prev) =>
+            prev.map((u) =>
+              u.id === target.userId ? { ...u, ...firestoreFields } : u
+            )
+          );
+          if (target.userId === user.id) {
+            setUser((prev) => ({ ...prev, ...firestoreFields }));
+          }
+        }
+      });
 
       const newTxn: Transaction = {
         id: `txn-${Date.now().toString().slice(-5)}`,
         userId: target.userId,
         reference: `TXN-${Math.floor(10000 + Math.random() * 89999)}`,
         date: new Date().toISOString().slice(0, 10),
-        description: `Task Reward: ${target.taskTitle}`,
+        description: `Task Reward Granted: ${target.taskTitle}`,
         amount: target.reward,
         type: "Task Reward",
         status: "Completed",
@@ -483,8 +597,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const newNotif: NotificationItem = {
         id: `notif-${Date.now()}`,
         userId: target.userId,
-        title: `Task Approved (+KSh ${target.reward})`,
-        message: `Your submission for '${target.taskTitle}' was approved!`,
+        title: `Task Approved (+KSh ${target.reward} Credited)`,
+        message: `Admin approved your submission for '${target.taskTitle}' and granted KSh ${target.reward.toLocaleString()} to your Available Balance!`,
         time: formatNowTimestamp(),
         read: false,
         type: "reward",
@@ -493,13 +607,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       saveNotificationToFirestore(newNotif);
     } else if (
       (status === "Rejected" || status === "Revision Required") &&
-      target.status === "Pending Review"
+      wasPending
     ) {
       const nextPending = Math.max(
         0,
-        (earner?.pendingEarnings ?? user.pendingEarnings) - target.reward
+        (earner?.pendingEarnings ?? 0) - target.reward
       );
-      updateUserInFirestore(target.userId, { pendingEarnings: nextPending });
       setAllUsers((prev) =>
         prev.map((u) =>
           u.id === target.userId ? { ...u, pendingEarnings: nextPending } : u
@@ -508,9 +621,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (target.userId === user.id) {
         setUser((prev) => ({
           ...prev,
-          pendingEarnings: nextPending,
+          pendingEarnings: Math.max(0, prev.pendingEarnings - target.reward),
         }));
       }
+
+      adjustUserPendingEarningsInFirestore(target.userId, -target.reward);
+
+      const newNotif: NotificationItem = {
+        id: `notif-${Date.now()}`,
+        userId: target.userId,
+        title:
+          status === "Rejected"
+            ? `Submission Rejected: ${target.taskTitle}`
+            : `Revision Requested: ${target.taskTitle}`,
+        message:
+          feedback ||
+          (status === "Rejected"
+            ? `Your submission for '${target.taskTitle}' was not approved.`
+            : `Please review the moderator feedback and update your submission for '${target.taskTitle}'.`),
+        time: formatNowTimestamp(),
+        read: false,
+        type: "submission",
+      };
+      setNotifications((prev) => [newNotif, ...prev]);
+      saveNotificationToFirestore(newNotif);
     }
   };
 
@@ -702,6 +836,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ads,
         notifications,
         submitTask,
+        updateSubmission,
+        cancelSubmission,
         requestWithdrawal,
         updateUserProfile,
         markAllNotificationsRead,

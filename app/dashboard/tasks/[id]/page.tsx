@@ -8,6 +8,7 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
+  Edit3,
   Eye,
   FileSpreadsheet,
   FileText,
@@ -18,10 +19,12 @@ import {
   Maximize2,
   Minimize2,
   Plus,
+  RotateCcw,
   Send,
   Trash2,
   Upload,
   Users,
+  XCircle,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { SubmissionFormat } from "@/lib/types";
@@ -41,7 +44,14 @@ const FORMAT_LABELS: { id: SubmissionFormat; label: string }[] = [
 
 export default function TaskDetailsPage() {
   const params = useParams<{ id: string }>();
-  const { tasks, submissions, user, submitTask } = useApp();
+  const {
+    tasks,
+    submissions,
+    user,
+    submitTask,
+    updateSubmission,
+    cancelSubmission,
+  } = useApp();
 
   const task = tasks.find((t) => t.id === params.id) || tasks[0];
 
@@ -53,6 +63,13 @@ export default function TaskDetailsPage() {
     task?.submissionFormat || "multiline_text"
   );
   const [imageZoomed, setImageZoomed] = useState(false);
+  const [isEditingSubmission, setIsEditingSubmission] = useState(false);
+  const [abortConfirmOpen, setAbortConfirmOpen] = useState(false);
+  const [actionBannerMessage, setActionBannerMessage] = useState<{
+    type: "success" | "aborted";
+    title: string;
+    message: string;
+  } | null>(null);
 
   // Form states for the 6 formats
   const [singleText, setSingleText] = useState("");
@@ -209,8 +226,48 @@ export default function TaskDetailsPage() {
     setConfirmModalOpen(true);
   };
 
+  const handleStartEditSubmission = () => {
+    if (!existingSubmission) return;
+    const data = existingSubmission.submittedData;
+    setActiveFormat(data.format || task?.submissionFormat || "multiline_text");
+    if (data.format === "text_input") {
+      setSingleText(data.textAnswer || "");
+    } else if (data.format === "multiline_text") {
+      setMultilineText(data.textAnswer || "");
+    }
+    if (data.tableRows && data.tableRows.length > 0) {
+      setTableRows(data.tableRows);
+    }
+    if (data.fieldValues) {
+      setFieldValues(data.fieldValues);
+    }
+    if (data.fileName) {
+      setSelectedFile({
+        name: data.fileName,
+        size: data.fileSize || "",
+        url: data.fileUrl,
+      });
+    }
+    setOptionalNotes(data.notes || "");
+    setValidationError(null);
+    setIsEditingSubmission(true);
+  };
+
+  const handleAbortSubmission = () => {
+    if (!existingSubmission) return;
+    cancelSubmission(existingSubmission.id);
+    setIsEditingSubmission(false);
+    setAbortConfirmOpen(false);
+    setJustSubmittedStatus(null);
+    setActionBannerMessage({
+      type: "aborted",
+      title: "Submission Aborted / Cancelled",
+      message: `Your submission for "${task.title}" has been cancelled and the task is no longer marked as Done. You can start fresh or return to Available Tasks.`,
+    });
+  };
+
   const handleConfirmSubmission = () => {
-    const created = submitTask(task.id, {
+    const payload = {
       format: activeFormat,
       textAnswer:
         activeFormat === "text_input"
@@ -224,13 +281,32 @@ export default function TaskDetailsPage() {
       fileSize: selectedFile?.size,
       fileUrl: selectedFile?.url,
       notes: optionalNotes,
-    });
+    };
 
-    setConfirmModalOpen(false);
-    setJustSubmittedStatus(created.status);
+    if (existingSubmission) {
+      updateSubmission(existingSubmission.id, payload);
+      setIsEditingSubmission(false);
+      setConfirmModalOpen(false);
+      setJustSubmittedStatus("Pending Review");
+      setActionBannerMessage({
+        type: "success",
+        title: "Submission Updated — Task Marked as Done!",
+        message: `Your updated work for "${task.title}" has been saved and is Pending Review.`,
+      });
+    } else {
+      const created = submitTask(task.id, payload);
+      setConfirmModalOpen(false);
+      setJustSubmittedStatus(created.status);
+      setActionBannerMessage({
+        type: "success",
+        title: "Task Submitted Successfully — Marked as Done!",
+        message: `Your submission for "${task.title}" has been queued for admin review. KSh ${task.reward} has been added to your Pending Earnings.`,
+      });
+    }
   };
 
-  const currentTaskStatus = justSubmittedStatus || existingSubmission?.status;
+  const currentTaskStatus = existingSubmission?.status || justSubmittedStatus;
+  const isTaskDone = Boolean(existingSubmission);
 
   if (!task) {
     return (
@@ -261,40 +337,109 @@ export default function TaskDetailsPage() {
           <span>Back to Available Tasks</span>
         </Link>
 
-        {currentTaskStatus && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500">Your Task Status:</span>
-            <StatusBadge status={currentTaskStatus} size="md" />
+        {isTaskDone && existingSubmission && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold bg-[#16A34A] text-white">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Task Marked as Done
+            </span>
+            <StatusBadge status={existingSubmission.status} size="md" />
           </div>
         )}
       </div>
 
-      {/* Submission Success Alert */}
-      {justSubmittedStatus && (
-        <div className="bg-[#F0FDF4] border border-emerald-200 rounded-lg p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Aborted / Cancelled Notification Banner */}
+      {actionBannerMessage?.type === "aborted" && !existingSubmission && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-start gap-3">
-            <CheckCircle2 className="w-5 h-5 text-[#16A34A] shrink-0 mt-0.5" />
+            <RotateCcw className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-[#14532D]">
-                  Task Submitted Successfully!
-                </h3>
-                <StatusBadge status={justSubmittedStatus} />
-              </div>
-              <p className="text-xs text-emerald-900">
-                Your submission for <strong>{task.title}</strong> has been
-                queued for quality review.{" "}
-                <strong>KSh {task.reward}</strong> has been added to your
-                Pending Earnings.
+              <h3 className="text-sm font-bold text-amber-900">
+                {actionBannerMessage.title}
+              </h3>
+              <p className="text-xs text-amber-800">
+                {actionBannerMessage.message}
               </p>
             </div>
           </div>
           <Link
-            href="/dashboard/submissions"
-            className="px-3.5 py-2 text-xs font-semibold bg-[#16A34A] text-white rounded-md hover:bg-[#15803d] shrink-0 text-center"
+            href="/dashboard/tasks"
+            className="px-3.5 py-2 text-xs font-semibold bg-white border border-amber-300 text-amber-900 rounded-md hover:bg-amber-100 shrink-0 text-center"
           >
-            View in My Submissions →
+            Browse Other Tasks →
           </Link>
+        </div>
+      )}
+
+      {/* Submission Success & Task Marked as Done Banner */}
+      {existingSubmission && (
+        <div className="bg-[#F0FDF4] border border-emerald-300 rounded-lg p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-xs">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-full bg-[#16A34A] text-white flex items-center justify-center shrink-0 mt-0.5">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-sm font-bold text-[#14532D]">
+                  {actionBannerMessage?.type === "success"
+                    ? actionBannerMessage.title
+                    : "Task Marked as Done!"}
+                </h3>
+                <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-[#16A34A] text-white">
+                  DONE ✓
+                </span>
+                <StatusBadge status={existingSubmission.status} />
+              </div>
+              <p className="text-xs text-emerald-900 leading-relaxed">
+                {existingSubmission.status === "Approved" ? (
+                  <>
+                    Your submission for <strong>{task.title}</strong> was
+                    approved by the admin and{" "}
+                    <strong>KSh {task.reward}</strong> has been credited to your
+                    Available Balance!
+                  </>
+                ) : actionBannerMessage?.type === "success" ? (
+                  actionBannerMessage.message
+                ) : (
+                  <>
+                    You have submitted <strong>{task.title}</strong> (submitted
+                    on {existingSubmission.submittedAt}). Reward:{" "}
+                    <strong>KSh {task.reward}</strong>. You can edit your
+                    submission or abort/cancel it anytime before admin approval.
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {existingSubmission.status !== "Approved" && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleStartEditSubmission}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold bg-white border border-emerald-300 text-[#14532D] hover:bg-emerald-100 rounded-md cursor-pointer"
+                >
+                  <Edit3 className="w-3.5 h-3.5 text-[#16A34A]" />
+                  <span>Edit Submission</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAbortConfirmOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 rounded-md cursor-pointer"
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                  <span>Abort / Cancel</span>
+                </button>
+              </>
+            )}
+            <Link
+              href="/dashboard/submissions"
+              className="px-3.5 py-2 text-xs font-semibold bg-[#16A34A] text-white rounded-md hover:bg-[#15803d] text-center"
+            >
+              My Submissions →
+            </Link>
+          </div>
         </div>
       )}
 

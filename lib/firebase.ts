@@ -242,6 +242,57 @@ export async function updateUserInFirestore(
 }
 
 /**
+ * Reliably grant task reward to an earner's account in Firestore by reading
+ * their latest user document and crediting availableBalance, totalEarnings,
+ * taskEarnings, completedTasks, and decrementing pendingEarnings.
+ */
+export async function grantTaskRewardToUserInFirestore(
+  userId: string,
+  reward: number,
+  wasPending = true
+): Promise<Partial<UserProfile> | null> {
+  if (!userId) return null;
+  try {
+    const userRef = doc(db, "users", userId);
+    const snap = await getDoc(userRef);
+    const data = snap.exists() ? (snap.data() as Partial<UserProfile>) : {};
+
+    const updatedFields: Partial<UserProfile> = {
+      availableBalance: Number(data.availableBalance ?? 0) + reward,
+      totalEarnings: Number(data.totalEarnings ?? 0) + reward,
+      taskEarnings: Number(data.taskEarnings ?? 0) + reward,
+      pendingEarnings: wasPending
+        ? Math.max(0, Number(data.pendingEarnings ?? 0) - reward)
+        : Number(data.pendingEarnings ?? 0),
+      completedTasks: Number(data.completedTasks ?? 0) + 1,
+    };
+
+    await setDoc(userRef, updatedFields, { merge: true });
+    return updatedFields;
+  } catch (err) {
+    console.warn("Firestore grantTaskRewardToUserInFirestore warning:", err);
+    return null;
+  }
+}
+
+export async function adjustUserPendingEarningsInFirestore(
+  userId: string,
+  delta: number
+): Promise<number | null> {
+  if (!userId) return null;
+  try {
+    const userRef = doc(db, "users", userId);
+    const snap = await getDoc(userRef);
+    const data = snap.exists() ? (snap.data() as Partial<UserProfile>) : {};
+    const nextPending = Math.max(0, Number(data.pendingEarnings ?? 0) + delta);
+    await setDoc(userRef, { pendingEarnings: nextPending }, { merge: true });
+    return nextPending;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Tasks collection helpers
  */
 export async function saveTaskToFirestore(task: Task) {
@@ -284,6 +335,14 @@ export async function saveSubmissionToFirestore(sub: Submission) {
     await setDoc(doc(db, "submissions", sub.id), cleanSub, { merge: true });
   } catch (err) {
     console.warn("Firestore saveSubmissionToFirestore warning:", err);
+  }
+}
+
+export async function deleteSubmissionFromFirestore(submissionId: string) {
+  try {
+    await deleteDoc(doc(db, "submissions", submissionId));
+  } catch {
+    // Ignore
   }
 }
 
