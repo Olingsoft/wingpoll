@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import {
   Advertisement,
   NotificationItem,
@@ -24,9 +24,18 @@ import {
   INITIAL_WITHDRAWALS,
   MOCK_ALL_USERS,
 } from "@/lib/mock-data";
+import {
+  auth,
+  FirebaseUser,
+  logoutFirebase,
+  onAuthStateChanged,
+} from "@/lib/firebase";
 
 interface AppContextType {
   user: UserProfile;
+  firebaseUser: FirebaseUser | null;
+  authLoading: boolean;
+  logoutUser: () => Promise<void>;
   allUsers: UserProfile[];
   tasks: Task[];
   submissions: Submission[];
@@ -71,6 +80,8 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile>(INITIAL_USER);
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [authLoading, setAuthLoading] = useState<boolean>(true);
   const [allUsers, setAllUsers] = useState<UserProfile[]>(MOCK_ALL_USERS);
   const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
   const [submissions, setSubmissions] =
@@ -85,6 +96,82 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<NotificationItem[]>(
     INITIAL_NOTIFICATIONS
   );
+
+  // Listen to Firebase Auth state changes (Email/Password & Google Sign-In)
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
+      setFirebaseUser(fbUser);
+      setAuthLoading(false);
+
+      if (fbUser) {
+        const displayName =
+          fbUser.displayName ||
+          (fbUser.email ? fbUser.email.split("@")[0] : "WingPoll Earner");
+        const initials = displayName
+          .trim()
+          .split(" ")
+          .map((part) => part[0])
+          .join("")
+          .toUpperCase()
+          .slice(0, 2);
+        const isGoogle = fbUser.providerData.some(
+          (p) => p.providerId === "google.com"
+        );
+        const refCode = `${displayName
+          .replace(/[^a-zA-Z]/g, "")
+          .toUpperCase()
+          .slice(0, 5) || "WING"}${fbUser.uid.slice(0, 3).toUpperCase()}`;
+
+        setUser((prev) => ({
+          ...prev,
+          id: fbUser.uid,
+          name: displayName,
+          email: fbUser.email || prev.email,
+          phone: fbUser.phoneNumber || prev.phone,
+          avatarInitials: initials || "WP",
+          photoURL: fbUser.photoURL || undefined,
+          authProvider: isGoogle ? "google" : "email",
+          referralCode: prev.referralCode || refCode,
+          referralLink: `https://wingpoll.co.ke/register?ref=${
+            prev.referralCode || refCode
+          }`,
+        }));
+
+        setAllUsers((prevUsers) => {
+          const exists = prevUsers.some(
+            (u) => u.id === fbUser.uid || u.email === fbUser.email
+          );
+          if (exists) return prevUsers;
+          const newProfile: UserProfile = {
+            ...INITIAL_USER,
+            id: fbUser.uid,
+            name: displayName,
+            email: fbUser.email || "",
+            avatarInitials: initials || "WP",
+            photoURL: fbUser.photoURL || undefined,
+            authProvider: isGoogle ? "google" : "email",
+            referralCode: refCode,
+            referralLink: `https://wingpoll.co.ke/register?ref=${refCode}`,
+            joinedDate: new Date().toISOString().slice(0, 10),
+            status: "Active",
+          };
+          return [newProfile, ...prevUsers];
+        });
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const logoutUser = async () => {
+    try {
+      await logoutFirebase();
+    } catch {
+      // Ignore if already signed out
+    }
+    setFirebaseUser(null);
+    setUser(INITIAL_USER);
+  };
 
   const submitTask = (
     taskId: string,
@@ -437,6 +524,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <AppContext.Provider
       value={{
         user,
+        firebaseUser,
+        authLoading,
+        logoutUser,
         allUsers,
         tasks,
         submissions,

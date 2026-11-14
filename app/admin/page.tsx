@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import {
+  AdFormat,
   AdPosition,
   Submission,
   SubmissionFormat,
@@ -127,8 +128,10 @@ export default function AdminDashboardPage() {
   const [adSponsor, setAdSponsor] = useState("");
   const [adDesc, setAdDesc] = useState("");
   const [adCta, setAdCta] = useState("Learn More");
+  const [adFormat, setAdFormat] = useState<AdFormat>("banner");
+  const [adVideoDuration, setAdVideoDuration] = useState("0:45");
   const [adPosition, setAdPosition] =
-    useState<AdPosition>("dashboard_banner");
+    useState<AdPosition>("task_list_banner");
   const [previewAdId, setPreviewAdId] = useState<string | null>(null);
 
   // Platform Settings State
@@ -256,8 +259,12 @@ export default function AdminDashboardPage() {
       ctaText: adCta || "Learn More",
       ctaUrl: "#partner",
       position: adPosition,
+      format: adFormat,
+      videoDuration: adFormat === "video" ? adVideoDuration || "0:45" : undefined,
+      videoHeadline: adFormat === "video" ? adTitle : undefined,
       active: true,
-      badgeText: "Sponsored Partner",
+      badgeText:
+        adFormat === "video" ? "Sponsored Video Ad" : "Sponsored Banner",
     });
     setAdTitle("");
     setAdSponsor("");
@@ -1303,9 +1310,54 @@ export default function AdminDashboardPage() {
                       />
                     </div>
 
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                          Ad Format
+                        </label>
+                        <select
+                          value={adFormat}
+                          onChange={(e) =>
+                            setAdFormat(e.target.value as AdFormat)
+                          }
+                          className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-md"
+                        >
+                          <option value="banner">Banner Ad</option>
+                          <option value="video">Video Ad</option>
+                        </select>
+                      </div>
+
+                      {adFormat === "video" ? (
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">
+                            Video Duration
+                          </label>
+                          <input
+                            type="text"
+                            value={adVideoDuration}
+                            onChange={(e) => setAdVideoDuration(e.target.value)}
+                            placeholder="e.g. 0:45"
+                            className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-md"
+                          />
+                        </div>
+                      ) : (
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">
+                            Button CTA Label
+                          </label>
+                          <input
+                            type="text"
+                            value={adCta}
+                            onChange={(e) => setAdCta(e.target.value)}
+                            className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-md"
+                          />
+                        </div>
+                      )}
+                    </div>
+
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Placement Position
+                        Placement Position (Tasks, Banners & Video Slots)
                       </label>
                       <select
                         value={adPosition}
@@ -1314,23 +1366,32 @@ export default function AdminDashboardPage() {
                         }
                         className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-md"
                       >
-                        <option value="homepage_promo">
-                          Homepage Promotional Section
-                        </option>
-                        <option value="dashboard_banner">
-                          Dashboard Top Banner
+                        <option value="task_list_banner">
+                          Tasks Marketplace Top Banner (task_list_banner)
                         </option>
                         <option value="task_list_inline">
-                          Between Task Listings
+                          Between Task Cards Inline Banner (task_list_inline)
+                        </option>
+                        <option value="task_list_video">
+                          Tasks Marketplace Video Ad (task_list_video)
+                        </option>
+                        <option value="task_details_video">
+                          Task Details Sidebar Video Ad (task_details_video)
                         </option>
                         <option value="task_details_sidebar">
-                          Task Details Sidebar
+                          Task Details Sidebar Banner (task_details_sidebar)
                         </option>
                         <option value="task_instructions_below">
-                          Below Task Instructions
+                          Below Task Instructions Banner (task_instructions_below)
+                        </option>
+                        <option value="dashboard_banner">
+                          User Dashboard Top Banner (dashboard_banner)
                         </option>
                         <option value="dashboard_section">
-                          Dashboard Content Section
+                          User Dashboard Content Section (dashboard_section)
+                        </option>
+                        <option value="homepage_promo">
+                          Homepage Promotional Banner (homepage_promo)
                         </option>
                       </select>
                     </div>
@@ -1344,18 +1405,6 @@ export default function AdminDashboardPage() {
                         value={adDesc}
                         onChange={(e) => setAdDesc(e.target.value)}
                         placeholder="Short promotional copy..."
-                        className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-md"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Button CTA Label
-                      </label>
-                      <input
-                        type="text"
-                        value={adCta}
-                        onChange={(e) => setAdCta(e.target.value)}
                         className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-md"
                       />
                     </div>
@@ -1418,8 +1467,23 @@ export default function AdminDashboardPage() {
                                     {ad.sponsor}
                                   </span>
                                 </td>
-                                <td className="py-3.5 px-4 font-mono text-[11px] text-slate-600">
-                                  {ad.position}
+                                <td className="py-3.5 px-4">
+                                  <div className="flex items-center gap-1.5 mb-0.5">
+                                    <span
+                                      className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+                                        ad.format === "video"
+                                          ? "bg-emerald-50 text-[#16A34A] border border-emerald-200"
+                                          : "bg-slate-100 text-slate-600"
+                                      }`}
+                                    >
+                                      {ad.format === "video"
+                                        ? "Video Ad"
+                                        : "Banner Ad"}
+                                    </span>
+                                    <span className="font-mono text-[11px] text-slate-600">
+                                      {ad.position}
+                                    </span>
+                                  </div>
                                 </td>
                                 <td className="py-3.5 px-4 text-slate-700 whitespace-nowrap">
                                   <strong>

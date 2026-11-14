@@ -2,7 +2,8 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useApp } from "@/context/AppContext";
 import {
   Briefcase,
   ClipboardCheck,
@@ -45,6 +46,14 @@ const NAV_ITEMS = [
 
 export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { logoutUser } = useApp();
+
+  const handleLogout = async () => {
+    await logoutUser();
+    onCloseMobile();
+    router.push("/login");
+  };
 
   const isActive = (href: string) => {
     if (href === "/dashboard") {
@@ -132,14 +141,14 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
 
         {/* Bottom Logout */}
         <div className="p-3 border-t border-slate-200 bg-slate-50/50">
-          <Link
-            href="/login"
-            onClick={onCloseMobile}
-            className="flex items-center gap-3 px-3 py-2 rounded-md text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-xs font-medium text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             <span>Logout</span>
-          </Link>
+          </button>
         </div>
       </aside>
     </>

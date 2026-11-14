@@ -225,9 +225,9 @@ export default function HomePage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-              {HOW_IT_WORKS_STEPS.map((item) => {
+               {HOW_IT_WORKS_STEPS.map((item) => {
                 const Icon = item.icon;
-                return (
+                 return (
                   <div
                     key={item.step}
                     className="bg-white border border-slate-200 rounded-lg p-5 flex flex-col justify-between"
@@ -362,8 +362,11 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Homepage Sponsored Ad Slot */}
-            <AdvertisementBanner position="homepage_promo" />
+            {/* Homepage Sponsored Banner & Video Ad Slots */}
+            <div className="space-y-4">
+              <AdvertisementBanner position="homepage_promo" />
+              <AdvertisementBanner position="task_list_video" />
+            </div>
           </div>
         </section>
 

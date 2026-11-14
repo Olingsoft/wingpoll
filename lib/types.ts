@@ -129,10 +129,15 @@ export interface ReferralRecord {
 export type AdPosition =
   | "homepage_promo"
   | "dashboard_banner"
+  | "task_list_banner"
   | "task_list_inline"
+  | "task_list_video"
   | "task_details_sidebar"
+  | "task_details_video"
   | "task_instructions_below"
   | "dashboard_section";
+
+export type AdFormat = "banner" | "video";
 
 export interface Advertisement {
   id: string;
@@ -142,6 +147,9 @@ export interface Advertisement {
   ctaText: string;
   ctaUrl: string;
   position: AdPosition;
+  format?: AdFormat;
+  videoDuration?: string;
+  videoHeadline?: string;
   active: boolean;
   impressions: number;
   clicks: number;
@@ -155,6 +163,8 @@ export interface UserProfile {
   phone: string;
   mpesaNumber: string;
   avatarInitials: string;
+  photoURL?: string;
+  authProvider?: "email" | "google" | "demo";
   availableBalance: number;
   totalEarnings: number;
   pendingEarnings: number;

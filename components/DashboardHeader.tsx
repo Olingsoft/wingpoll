@@ -56,14 +56,25 @@ export function DashboardHeader({ onOpenMobileSidebar }: DashboardHeaderProps) {
           href="/dashboard/profile"
           className="flex items-center gap-2.5 pl-2 pr-2.5 py-1 rounded-md hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-colors"
         >
-          <div className="w-8 h-8 rounded-full bg-[#14532D] text-white text-xs font-bold flex items-center justify-center">
-            {user.avatarInitials}
-          </div>
+          {user.photoURL ? (
+            <img
+              src={user.photoURL}
+              alt={user.name}
+              referrerPolicy="no-referrer"
+              className="w-8 h-8 rounded-full object-cover border border-emerald-200"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-[#14532D] text-white text-xs font-bold flex items-center justify-center">
+              {user.avatarInitials}
+            </div>
+          )}
           <div className="hidden md:block text-left">
             <p className="text-xs font-semibold text-slate-900 leading-none">
               {user.name}
             </p>
-            <p className="text-[11px] text-slate-500 mt-0.5">{user.phone}</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              {user.email || user.phone}
+            </p>
           </div>
         </Link>
       </div>

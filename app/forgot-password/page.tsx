@@ -5,31 +5,50 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, CheckCircle2, Mail } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  CheckCircle2,
+  Loader2,
+  Mail,
+} from "lucide-react";
 import { Navbar } from "@/components/Navbar";
+import {
+  getFirebaseAuthErrorMessage,
+  sendFirebasePasswordReset,
+} from "@/lib/firebase";
 
 const forgotSchema = z.object({
-  email: z.string().email("Please enter the email address linked to your account."),
+  email: z
+    .string()
+    .email("Please enter the email address linked to your account."),
 });
 
 type ForgotFormValues = z.infer<typeof forgotSchema>;
 
 export default function ForgotPasswordPage() {
   const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<ForgotFormValues>({
     resolver: zodResolver(forgotSchema),
     defaultValues: {
-      email: "john@example.com",
+      email: "",
     },
   });
 
-  const onSubmit = (data: ForgotFormValues) => {
-    setSubmittedEmail(data.email);
+  const onSubmit = async (data: ForgotFormValues) => {
+    setAuthError(null);
+    try {
+      await sendFirebasePasswordReset(data.email);
+      setSubmittedEmail(data.email);
+    } catch (error) {
+      setAuthError(getFirebaseAuthErrorMessage(error));
+    }
   };
 
   return (
@@ -48,10 +67,17 @@ export default function ForgotPasswordPage() {
               Reset Your Password
             </h1>
             <p className="text-xs text-slate-500 mt-1">
-              Enter your registered email address and we will send password
-              recovery instructions.
+              Enter your registered email address and Firebase will send a
+              password recovery link.
             </p>
           </div>
+
+          {authError && (
+            <div className="mb-5 p-3.5 rounded-md bg-red-50 border border-red-200 flex items-start gap-2.5 text-xs text-red-700">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+              <span>{authError}</span>
+            </div>
+          )}
 
           {submittedEmail ? (
             <div className="space-y-4">
@@ -83,7 +109,7 @@ export default function ForgotPasswordPage() {
                   <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="email"
-                    placeholder="john@example.com"
+                    placeholder="you@gmail.com"
                     {...register("email")}
                     className="w-full pl-9 pr-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-md focus:outline-none focus:bg-white focus:border-[#16A34A]"
                   />
@@ -97,9 +123,17 @@ export default function ForgotPasswordPage() {
 
               <button
                 type="submit"
-                className="w-full py-2.5 px-4 bg-[#16A34A] hover:bg-[#15803d] text-white text-sm font-semibold rounded-md transition-colors cursor-pointer"
+                disabled={isSubmitting}
+                className="w-full py-2.5 px-4 bg-[#16A34A] hover:bg-[#15803d] text-white text-sm font-semibold rounded-md transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
               >
-                Send Reset Instructions
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Sending Reset Link...</span>
+                  </>
+                ) : (
+                  <span>Send Reset Instructions</span>
+                )}
               </button>
             </form>
           )}
@@ -118,4 +152,3 @@ export default function ForgotPasswordPage() {
     </div>
   );
 }
-

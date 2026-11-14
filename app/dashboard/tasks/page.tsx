@@ -83,6 +83,9 @@ export default function AvailableTasksPage() {
         </p>
       </div>
 
+      {/* Top Marketplace Banner Ad */}
+      <AdvertisementBanner position="task_list_banner" />
+
       {/* Filters & Search */}
       <TaskFilters
         searchQuery={searchQuery}
@@ -115,7 +118,7 @@ export default function AvailableTasksPage() {
             ))}
           </div>
 
-          {/* Inline Sponsored Ad Between Task Listings */}
+          {/* Inline Sponsored Banner Ad Between Task Listings */}
           <AdvertisementBanner position="task_list_inline" />
 
           {/* Second row of tasks */}
@@ -126,6 +129,9 @@ export default function AvailableTasksPage() {
               ))}
             </div>
           )}
+
+          {/* Sponsored Video Ad in Task Marketplace */}
+          <AdvertisementBanner position="task_list_video" />
 
           {/* Pagination */}
           <div className="bg-white border border-slate-200 rounded-lg px-4 py-3 flex items-center justify-between">

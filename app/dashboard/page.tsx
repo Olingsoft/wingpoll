@@ -192,8 +192,11 @@ export default function DashboardOverviewPage() {
         </div>
       </div>
 
-      {/* Dashboard Content Sponsored Section */}
-      <AdvertisementBanner position="dashboard_section" />
+      {/* Dashboard Content Sponsored Section (Banner + Video Ad) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+        <AdvertisementBanner position="dashboard_section" />
+        <AdvertisementBanner position="task_list_video" />
+      </div>
 
       {/* Recent Transactions Preview */}
       <div className="space-y-3">

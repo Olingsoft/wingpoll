@@ -769,7 +769,10 @@ export default function TaskDetailsPage() {
             </ul>
           </div>
 
-          {/* Sidebar Sponsored Ad */}
+          {/* Sidebar Sponsored Video Ad */}
+          <AdvertisementBanner position="task_details_video" compact />
+
+          {/* Sidebar Sponsored Banner Ad */}
           <AdvertisementBanner position="task_details_sidebar" compact />
         </div>
       </div>
