@@ -47,7 +47,7 @@ const NAV_ITEMS = [
 export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { logoutUser } = useApp();
+  const { user, logoutUser } = useApp();
 
   const handleLogout = async () => {
     await logoutUser();
@@ -124,19 +124,21 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
             );
           })}
 
-          <div className="pt-4 mt-4 border-t border-slate-100">
-            <div className="px-2.5 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-              Platform Demo
+          {user.role === "admin" && (
+            <div className="pt-4 mt-4 border-t border-slate-100">
+              <div className="px-2.5 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                Administration
+              </div>
+              <Link
+                href="/admin"
+                onClick={onCloseMobile}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+              >
+                <ShieldCheck className="w-4 h-4 text-[#14532D]" />
+                <span>Admin Dashboard</span>
+              </Link>
             </div>
-            <Link
-              href="/admin"
-              onClick={onCloseMobile}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-            >
-              <ShieldCheck className="w-4 h-4 text-[#14532D]" />
-              <span>Admin Dashboard</span>
-            </Link>
-          </div>
+          )}
         </div>
 
         {/* Bottom Logout */}

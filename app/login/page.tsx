@@ -17,6 +17,7 @@ import { Navbar } from "@/components/Navbar";
 import {
   getFirebaseAuthErrorMessage,
   loginWithEmail,
+  saveUserToFirestore,
   signInWithGooglePopup,
 } from "@/lib/firebase";
 import { useApp } from "@/context/AppContext";
@@ -52,13 +53,11 @@ export default function LoginPage() {
     setIsEmailLoading(true);
     try {
       const fbUser = await loginWithEmail(data.email, data.password);
-      updateUserProfile({
-        id: fbUser.uid,
-        name: fbUser.displayName || data.email.split("@")[0],
-        email: fbUser.email || data.email,
-        authProvider: "email",
-      });
-      if (!fbUser.emailVerified) {
+      const savedProfile = await saveUserToFirestore(fbUser);
+      updateUserProfile(savedProfile);
+      if (savedProfile.role === "admin") {
+        router.push("/admin");
+      } else if (!fbUser.emailVerified) {
         router.push("/verify-email");
       } else {
         router.push("/dashboard");
@@ -75,14 +74,13 @@ export default function LoginPage() {
     setIsGoogleLoading(true);
     try {
       const fbUser = await signInWithGooglePopup();
-      updateUserProfile({
-        id: fbUser.uid,
-        name: fbUser.displayName || "Google User",
-        email: fbUser.email || "",
-        photoURL: fbUser.photoURL || undefined,
+      const savedProfile = await saveUserToFirestore(fbUser, {
         authProvider: "google",
       });
-      if (!fbUser.emailVerified) {
+      updateUserProfile(savedProfile);
+      if (savedProfile.role === "admin") {
+        router.push("/admin");
+      } else if (!fbUser.emailVerified) {
         router.push("/verify-email");
       } else {
         router.push("/dashboard");

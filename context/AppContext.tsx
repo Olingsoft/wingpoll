@@ -160,7 +160,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
       setEmailVerified(fbUser ? fbUser.emailVerified : false);
-      setAuthLoading(false);
 
       if (fbUser) {
         const savedProfile = await saveUserToFirestore(fbUser);
@@ -181,6 +180,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           return [savedProfile, ...prevUsers];
         });
       }
+
+      setAuthLoading(false);
     });
 
     return () => unsubscribe();

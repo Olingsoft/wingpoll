@@ -83,6 +83,10 @@ const ADMIN_NAV: {
 
 export default function AdminDashboardPage() {
   const {
+    user,
+    firebaseUser,
+    authLoading,
+    logoutUser,
     allUsers,
     tasks,
     submissions,
@@ -395,6 +399,110 @@ export default function AdminDashboardPage() {
     setAdSponsor("");
     setAdDesc("");
   };
+
+  // 1. Wait while Firebase Auth & Firestore User Role are loading
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] p-6">
+        <div className="bg-white border border-slate-200 rounded-lg p-8 max-w-sm w-full text-center space-y-3 shadow-xs">
+          <Loader2 className="w-8 h-8 animate-spin text-[#16A34A] mx-auto" />
+          <h2 className="text-base font-bold text-slate-900">
+            Verifying Admin Access...
+          </h2>
+          <p className="text-xs text-slate-500">
+            Checking your authentication session and role in Firestore.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Check if user is logged in
+  if (!firebaseUser) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] p-6">
+        <div className="bg-white border border-slate-200 rounded-lg p-8 max-w-md w-full text-center space-y-4 shadow-xs">
+          <div className="w-12 h-12 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center mx-auto text-amber-600">
+            <ShieldCheck className="w-6 h-6" />
+          </div>
+          <div className="space-y-1">
+            <h1 className="text-lg font-bold text-slate-900">
+              Admin Sign-In Required
+            </h1>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              You must be logged in with an Administrator account (
+              <code className="font-mono text-slate-700">role: &quot;admin&quot;</code>) to
+              access the WingPoll Admin Portal.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <Link
+              href="/login"
+              className="w-full sm:w-auto px-5 py-2.5 text-xs font-semibold text-white bg-[#16A34A] hover:bg-[#15803d] rounded-md transition-colors"
+            >
+              Log In as Admin
+            </Link>
+            <Link
+              href="/"
+              className="w-full sm:w-auto px-5 py-2.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
+            >
+              Back to Home
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. Check if logged-in user has role === "admin"
+  if (user.role !== "admin") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] p-6">
+        <div className="bg-white border border-slate-200 rounded-lg p-8 max-w-md w-full text-center space-y-4 shadow-xs">
+          <div className="w-12 h-12 rounded-full bg-red-50 border border-red-200 flex items-center justify-center mx-auto text-red-600">
+            <ShieldCheck className="w-6 h-6" />
+          </div>
+          <div className="space-y-1.5">
+            <h1 className="text-lg font-bold text-slate-900">
+              Access Denied — Admin Role Required
+            </h1>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              You are signed in as{" "}
+              <strong className="text-slate-800">
+                {user.email || firebaseUser.email}
+              </strong>{" "}
+              with role{" "}
+              <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-mono text-[11px]">
+                {user.role || "user"}
+              </span>
+              . Only accounts with{" "}
+              <code className="font-mono text-[#14532D] font-semibold">
+                role: &quot;admin&quot;
+              </code>{" "}
+              can access <code className="font-mono">/admin</code>.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <Link
+              href="/dashboard"
+              className="w-full sm:w-auto px-5 py-2.5 text-xs font-semibold text-white bg-[#16A34A] hover:bg-[#15803d] rounded-md transition-colors"
+            >
+              Go to User Dashboard
+            </Link>
+            <button
+              type="button"
+              onClick={async () => {
+                await logoutUser();
+              }}
+              className="w-full sm:w-auto px-5 py-2.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors cursor-pointer"
+            >
+              Switch Account
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex bg-[#F8FAFC]">
