@@ -12,7 +12,6 @@ import {
   Loader2,
   Lock,
   Mail,
-  UserCheck,
 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import {
@@ -39,7 +38,6 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -94,12 +92,6 @@ export default function LoginPage() {
     } finally {
       setIsGoogleLoading(false);
     }
-  };
-
-  const handleQuickDemoLogin = () => {
-    setValue("email", "john@example.com");
-    setValue("password", "password123");
-    router.push("/dashboard");
   };
 
   return (
@@ -246,39 +238,13 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Demo Account Quick Fill */}
-          <div className="mt-5 p-3 rounded-md bg-[#F0FDF4] border border-emerald-200 flex items-center justify-between gap-3">
-            <div className="text-xs text-[#14532D]">
-              <p className="font-semibold">Quick Preview Mode</p>
-              <p className="text-[11px] text-emerald-800">
-                Explore dashboard with sample data
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleQuickDemoLogin}
-              className="px-3 py-1.5 text-xs font-semibold bg-[#14532D] text-white rounded hover:bg-emerald-950 inline-flex items-center gap-1 shrink-0 cursor-pointer"
-            >
-              <UserCheck className="w-3.5 h-3.5" />
-              <span>Demo Preview</span>
-            </button>
-          </div>
-
-          <div className="mt-6 pt-5 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-600">
-            <span>
-              New to WingPoll?{" "}
-              <Link
-                href="/register"
-                className="font-semibold text-[#16A34A] hover:underline"
-              >
-                Create account
-              </Link>
-            </span>
+          <div className="mt-6 pt-5 border-t border-slate-100 text-center text-xs text-slate-600">
+            New to WingPoll?{" "}
             <Link
-              href="/admin"
-              className="font-medium text-slate-500 hover:text-slate-800"
+              href="/register"
+              className="font-semibold text-[#16A34A] hover:underline"
             >
-              Admin Portal →
+              Create account
             </Link>
           </div>
         </div>
