@@ -29,13 +29,18 @@ import {
   FirebaseUser,
   logoutFirebase,
   onAuthStateChanged,
+  reloadFirebaseUser,
+  sendVerificationEmail,
 } from "@/lib/firebase";
 
 interface AppContextType {
   user: UserProfile;
   firebaseUser: FirebaseUser | null;
+  emailVerified: boolean;
   authLoading: boolean;
   logoutUser: () => Promise<void>;
+  refreshEmailVerification: () => Promise<boolean>;
+  resendEmailVerification: () => Promise<void>;
   allUsers: UserProfile[];
   tasks: Task[];
   submissions: Submission[];
@@ -81,6 +86,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile>(INITIAL_USER);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [emailVerified, setEmailVerified] = useState<boolean>(false);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
   const [allUsers, setAllUsers] = useState<UserProfile[]>(MOCK_ALL_USERS);
   const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
@@ -101,6 +107,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
       setFirebaseUser(fbUser);
+      setEmailVerified(fbUser ? fbUser.emailVerified : false);
       setAuthLoading(false);
 
       if (fbUser) {
@@ -170,7 +177,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Ignore if already signed out
     }
     setFirebaseUser(null);
+    setEmailVerified(false);
     setUser(INITIAL_USER);
+  };
+
+  const refreshEmailVerification = async (): Promise<boolean> => {
+    const verified = await reloadFirebaseUser();
+    setEmailVerified(verified);
+    if (auth.currentUser) {
+      setFirebaseUser(auth.currentUser);
+    }
+    return verified;
+  };
+
+  const resendEmailVerification = async (): Promise<void> => {
+    await sendVerificationEmail(auth.currentUser);
   };
 
   const submitTask = (
@@ -525,8 +546,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         firebaseUser,
+        emailVerified,
         authLoading,
         logoutUser,
+        refreshEmailVerification,
+        resendEmailVerification,
         allUsers,
         tasks,
         submissions,

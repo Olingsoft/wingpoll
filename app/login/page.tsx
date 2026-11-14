@@ -60,7 +60,11 @@ export default function LoginPage() {
         email: fbUser.email || data.email,
         authProvider: "email",
       });
-      router.push("/dashboard");
+      if (!fbUser.emailVerified) {
+        router.push("/verify-email");
+      } else {
+        router.push("/dashboard");
+      }
     } catch (error) {
       setAuthError(getFirebaseAuthErrorMessage(error));
     } finally {
@@ -80,7 +84,11 @@ export default function LoginPage() {
         photoURL: fbUser.photoURL || undefined,
         authProvider: "google",
       });
-      router.push("/dashboard");
+      if (!fbUser.emailVerified) {
+        router.push("/verify-email");
+      } else {
+        router.push("/dashboard");
+      }
     } catch (error) {
       setAuthError(getFirebaseAuthErrorMessage(error));
     } finally {

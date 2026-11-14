@@ -51,10 +51,36 @@ const passwordSchema = z
 type PasswordFormValues = z.infer<typeof passwordSchema>;
 
 export default function ProfileSettingsPage() {
-  const { user, updateUserProfile } = useApp();
+  const {
+    user,
+    firebaseUser,
+    emailVerified,
+    resendEmailVerification,
+    refreshEmailVerification,
+    updateUserProfile,
+  } = useApp();
   const [profileSaved, setProfileSaved] = useState(false);
   const [passwordSaved, setPasswordSaved] = useState(false);
   const [avatarTheme, setAvatarTheme] = useState<string>("#14532D");
+  const [verificationMsg, setVerificationMsg] = useState<string | null>(null);
+
+  const handleSendVerifyEmail = async () => {
+    try {
+      await resendEmailVerification();
+      setVerificationMsg("Verification email sent! Please check your inbox.");
+    } catch {
+      setVerificationMsg("Please wait a moment before requesting another link.");
+    }
+  };
+
+  const handleCheckVerifyStatus = async () => {
+    const verified = await refreshEmailVerification();
+    setVerificationMsg(
+      verified
+        ? "Your email address is now verified!"
+        : "Not verified yet. Click the link in your email first."
+    );
+  };
 
   const {
     register,
@@ -137,9 +163,47 @@ export default function ProfileSettingsPage() {
                 {user.name}
               </h2>
               <p className="text-xs text-slate-500">{user.email}</p>
-              <span className="inline-block mt-2 px-2.5 py-0.5 text-[11px] font-semibold bg-[#F0FDF4] text-[#14532D] border border-emerald-200 rounded">
-                Verified Earner • Joined {user.joinedDate}
-              </span>
+              <div className="flex flex-wrap items-center justify-center gap-1.5 mt-2">
+                <span
+                  className={`px-2.5 py-0.5 text-[11px] font-semibold rounded border ${
+                    !firebaseUser || emailVerified
+                      ? "bg-[#F0FDF4] text-[#14532D] border-emerald-200"
+                      : "bg-amber-50 text-amber-800 border-amber-200"
+                  }`}
+                >
+                  {!firebaseUser || emailVerified
+                    ? "Email Verified"
+                    : "Email Unverified"}
+                </span>
+                <span className="px-2.5 py-0.5 text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 rounded">
+                  Joined {user.joinedDate}
+                </span>
+              </div>
+              {firebaseUser && !emailVerified && (
+                <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
+                  <div className="flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSendVerifyEmail}
+                      className="px-2.5 py-1 text-[11px] font-semibold bg-[#16A34A] hover:bg-[#15803d] text-white rounded cursor-pointer"
+                    >
+                      Send Verification Email
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCheckVerifyStatus}
+                      className="px-2.5 py-1 text-[11px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded cursor-pointer"
+                    >
+                      Refresh Status
+                    </button>
+                  </div>
+                  {verificationMsg && (
+                    <p className="text-[11px] text-[#14532D] font-medium">
+                      {verificationMsg}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="pt-4 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">

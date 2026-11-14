@@ -95,7 +95,7 @@ export default function RegisterPage() {
       });
       setRegisteredSuccess(true);
       setTimeout(() => {
-        router.push("/dashboard");
+        router.push("/verify-email");
       }, 900);
     } catch (error) {
       setAuthError(getFirebaseAuthErrorMessage(error));
@@ -148,7 +148,9 @@ export default function RegisterPage() {
           {registeredSuccess && (
             <div className="mb-5 p-3.5 rounded-md bg-[#F0FDF4] border border-emerald-200 flex items-center gap-2.5 text-xs text-[#14532D] font-medium">
               <CheckCircle2 className="w-4 h-4 text-[#16A34A] shrink-0" />
-              <span>Account created! Redirecting to your dashboard...</span>
+              <span>
+                Account created! Verification email sent — redirecting...
+              </span>
             </div>
           )}
 

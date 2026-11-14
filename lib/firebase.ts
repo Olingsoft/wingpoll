@@ -7,6 +7,8 @@ import {
   createUserWithEmailAndPassword,
   signInWithPopup,
   sendPasswordResetEmail,
+  sendEmailVerification,
+  reload,
   signOut,
   updateProfile,
   onAuthStateChanged,
@@ -57,7 +59,8 @@ export async function loginWithEmail(email: string, password: string) {
 }
 
 /**
- * Register a new account with Email & Password and set Display Name
+ * Register a new account with Email & Password, set Display Name,
+ * and automatically send a Firebase Email Verification link
  */
 export async function registerWithEmail(
   fullName: string,
@@ -74,7 +77,28 @@ export async function registerWithEmail(
       displayName: fullName.trim(),
     });
   }
+  await sendEmailVerification(credential.user);
   return credential.user;
+}
+
+/**
+ * Send or Resend Email Verification Link to the current Firebase user
+ */
+export async function sendVerificationEmail(targetUser?: FirebaseUser | null) {
+  const userToVerify = targetUser ?? auth.currentUser;
+  if (!userToVerify) {
+    throw new Error("No signed-in user found to verify.");
+  }
+  await sendEmailVerification(userToVerify);
+}
+
+/**
+ * Reload current Firebase user from server and return updated emailVerified status
+ */
+export async function reloadFirebaseUser(): Promise<boolean> {
+  if (!auth.currentUser) return false;
+  await reload(auth.currentUser);
+  return auth.currentUser.emailVerified;
 }
 
 /**
@@ -126,7 +150,7 @@ export function getFirebaseAuthErrorMessage(error: unknown): string {
     case "auth/popup-blocked":
       return "Sign-in popup was blocked by your browser. Please allow popups for this site.";
     case "auth/too-many-requests":
-      return "Too many unsuccessful attempts. Please wait a moment and try again.";
+      return "Too many requests. Please wait a minute before requesting another email.";
     case "auth/network-request-failed":
       return "Network error. Please check your internet connection and try again.";
     default:
@@ -138,4 +162,3 @@ export function getFirebaseAuthErrorMessage(error: unknown): string {
 
 export { app, auth, googleProvider, analytics, onAuthStateChanged };
 export type { FirebaseUser };
-
