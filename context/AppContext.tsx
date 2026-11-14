@@ -13,29 +13,31 @@ import {
   Withdrawal,
   WithdrawalStatus,
 } from "@/lib/types";
-import {
-  INITIAL_ADS,
-  INITIAL_NOTIFICATIONS,
-  INITIAL_REFERRALS,
-  INITIAL_SUBMISSIONS,
-  INITIAL_TASKS,
-  INITIAL_TRANSACTIONS,
-  INITIAL_USER,
-  INITIAL_WITHDRAWALS,
-  MOCK_ALL_USERS,
-} from "@/lib/mock-data";
+import { INITIAL_USER } from "@/lib/mock-data";
 import {
   auth,
   createAdminAccountInFirebase,
+  deleteAdFromFirestore,
   deleteTaskFromFirestore,
+  fetchAllAdsFromFirestore,
+  fetchAllNotificationsFromFirestore,
+  fetchAllReferralsFromFirestore,
+  fetchAllSubmissionsFromFirestore,
   fetchAllTasksFromFirestore,
+  fetchAllTransactionsFromFirestore,
   fetchAllUsersFromFirestore,
+  fetchAllWithdrawalsFromFirestore,
   FirebaseUser,
   logoutFirebase,
   onAuthStateChanged,
   reloadFirebaseUser,
+  saveAdToFirestore,
+  saveNotificationToFirestore,
+  saveSubmissionToFirestore,
   saveTaskToFirestore,
+  saveTransactionToFirestore,
   saveUserToFirestore,
+  saveWithdrawalToFirestore,
   sendVerificationEmail,
   updateUserInFirestore,
 } from "@/lib/firebase";
@@ -96,63 +98,42 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+function formatNowTimestamp(): string {
+  const now = new Date();
+  return now.toLocaleString("en-KE", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile>(INITIAL_USER);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [emailVerified, setEmailVerified] = useState<boolean>(false);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
-  const [allUsers, setAllUsers] = useState<UserProfile[]>(MOCK_ALL_USERS);
-  const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
-  const [submissions, setSubmissions] =
-    useState<Submission[]>(INITIAL_SUBMISSIONS);
-  const [withdrawals, setWithdrawals] = useState<Withdrawal[]>(
-    INITIAL_WITHDRAWALS ?? []
-  );
-  const [transactions, setTransactions] =
-    useState<Transaction[]>(INITIAL_TRANSACTIONS);
-  const [referrals] = useState<ReferralRecord[]>(INITIAL_REFERRALS);
-  const [ads, setAds] = useState<Advertisement[]>(INITIAL_ADS);
-  const [notifications, setNotifications] = useState<NotificationItem[]>(
-    INITIAL_NOTIFICATIONS
-  );
 
-  // Load persisted users and tasks from Firestore on startup
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [referrals, setReferrals] = useState<ReferralRecord[]>([]);
+  const [ads, setAds] = useState<Advertisement[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
+  // Load all collections from Firestore on startup
   useEffect(() => {
-    fetchAllUsersFromFirestore().then((firestoreUsers) => {
-      if (firestoreUsers.length > 0) {
-        setAllUsers((prev) => {
-          const merged = [...prev];
-          firestoreUsers.forEach((fu) => {
-            const idx = merged.findIndex(
-              (u) => u.id === fu.id || (fu.email && u.email === fu.email)
-            );
-            if (idx >= 0) {
-              merged[idx] = { ...merged[idx], ...fu };
-            } else {
-              merged.unshift(fu);
-            }
-          });
-          return merged;
-        });
-      }
-    });
-
-    fetchAllTasksFromFirestore().then((firestoreTasks) => {
-      if (firestoreTasks.length > 0) {
-        setTasks((prev) => {
-          const merged = [...prev];
-          firestoreTasks.forEach((ft) => {
-            const idx = merged.findIndex((t) => t.id === ft.id);
-            if (idx >= 0) {
-              merged[idx] = ft;
-            } else {
-              merged.unshift(ft);
-            }
-          });
-          return merged;
-        });
-      }
-    });
+    fetchAllUsersFromFirestore().then(setAllUsers);
+    fetchAllTasksFromFirestore().then(setTasks);
+    fetchAllSubmissionsFromFirestore().then(setSubmissions);
+    fetchAllWithdrawalsFromFirestore().then(setWithdrawals);
+    fetchAllTransactionsFromFirestore().then(setTransactions);
+    fetchAllReferralsFromFirestore().then(setReferrals);
+    fetchAllAdsFromFirestore().then(setAds);
+    fetchAllNotificationsFromFirestore().then(setNotifications);
   }, []);
 
   // Listen to Firebase Auth state changes (Email/Password & Google Sign-In)
@@ -163,10 +144,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       if (fbUser) {
         const savedProfile = await saveUserToFirestore(fbUser);
-        setUser((prev) => ({
-          ...prev,
-          ...savedProfile,
-        }));
+        setUser(savedProfile);
 
         setAllUsers((prevUsers) => {
           const idx = prevUsers.findIndex(
@@ -179,6 +157,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
           return [savedProfile, ...prevUsers];
         });
+      } else {
+        setUser(INITIAL_USER);
       }
 
       setAuthLoading(false);
@@ -216,47 +196,55 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     submittedData: Submission["submittedData"]
   ): Submission => {
     const task = tasks.find((t) => t.id === taskId);
-    const reward = task ? task.reward : 50;
+    const reward = task ? task.reward : 0;
     const newSub: Submission = {
-      id: `sub-${Date.now().toString().slice(-4)}`,
+      id: `sub-${Date.now().toString().slice(-5)}`,
       taskId,
-      taskTitle: task ? task.title : "Microtask Submission",
+      taskTitle: task ? task.title : "Task Submission",
       category: task ? task.category : "Data Entry",
       userId: user.id,
       userName: user.name,
       userEmail: user.email,
-      submittedAt: "2026-11-12 12:50 PM",
+      submittedAt: formatNowTimestamp(),
       reward,
       status: "Pending Review",
       submittedData,
     };
 
     setSubmissions((prev) => [newSub, ...prev]);
+    saveSubmissionToFirestore(newSub);
 
     setTasks((prev) =>
-      prev.map((t) =>
-        t.id === taskId && t.availableSlots > 0
-          ? { ...t, availableSlots: t.availableSlots - 1 }
-          : t
-      )
+      prev.map((t) => {
+        if (t.id === taskId && t.availableSlots > 0) {
+          const updatedTask = { ...t, availableSlots: t.availableSlots - 1 };
+          saveTaskToFirestore(updatedTask);
+          return updatedTask;
+        }
+        return t;
+      })
     );
 
+    const nextPending = user.pendingEarnings + reward;
     setUser((prev) => ({
       ...prev,
-      pendingEarnings: prev.pendingEarnings + reward,
+      pendingEarnings: nextPending,
     }));
+    if (user.id) {
+      updateUserInFirestore(user.id, { pendingEarnings: nextPending });
+    }
 
-    setNotifications((prev) => [
-      {
-        id: `notif-${Date.now()}`,
-        title: "Task Submitted for Review",
-        message: `Your work for '${newSub.taskTitle}' (KSh ${reward}) is now Pending Review.`,
-        time: "Just now",
-        read: false,
-        type: "submission",
-      },
-      ...prev,
-    ]);
+    const newNotif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      userId: user.id,
+      title: "Task Submitted for Review",
+      message: `Your work for '${newSub.taskTitle}' (KSh ${reward}) is now Pending Review.`,
+      time: formatNowTimestamp(),
+      read: false,
+      type: "submission",
+    };
+    setNotifications((prev) => [newNotif, ...prev]);
+    saveNotificationToFirestore(newNotif);
 
     return newSub;
   };
@@ -267,29 +255,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   ): Withdrawal => {
     const refCode = `MPESA-WTH-${Math.floor(10000 + Math.random() * 90000)}`;
     const newWithdrawal: Withdrawal = {
-      id: `wth-${Date.now().toString().slice(-4)}`,
+      id: `wth-${Date.now().toString().slice(-5)}`,
       reference: refCode,
       userId: user.id,
       userName: user.name,
       userEmail: user.email,
       amount,
       mpesaNumber,
-      requestedAt: "2026-11-12 12:52 PM",
+      requestedAt: formatNowTimestamp(),
       status: "Processing",
       notes: "Pending admin approval for M-Pesa payout",
     };
 
     setWithdrawals((prev) => [newWithdrawal, ...prev]);
+    saveWithdrawalToFirestore(newWithdrawal);
 
+    const nextAvailable = Math.max(0, user.availableBalance - amount);
     setUser((prev) => ({
       ...prev,
-      availableBalance: Math.max(0, prev.availableBalance - amount),
+      availableBalance: nextAvailable,
     }));
+    if (user.id) {
+      updateUserInFirestore(user.id, { availableBalance: nextAvailable });
+    }
 
     const newTxn: Transaction = {
-      id: `txn-${Date.now().toString().slice(-4)}`,
+      id: `txn-${Date.now().toString().slice(-5)}`,
+      userId: user.id,
       reference: refCode,
-      date: "2026-11-12",
+      date: new Date().toISOString().slice(0, 10),
       description: `M-Pesa Withdrawal Request to ${mpesaNumber} (Pending Admin Approval)`,
       amount: -amount,
       type: "Withdrawal",
@@ -297,18 +291,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
 
     setTransactions((prev) => [newTxn, ...prev]);
+    saveTransactionToFirestore(newTxn);
 
-    setNotifications((prev) => [
-      {
-        id: `notif-${Date.now()}`,
-        title: "Withdrawal Request Sent for Admin Approval",
-        message: `Your M-Pesa withdrawal request of KSh ${amount.toLocaleString()} to ${mpesaNumber} is awaiting admin approval.`,
-        time: "Just now",
-        read: false,
-        type: "withdrawal",
-      },
-      ...prev,
-    ]);
+    const newNotif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      userId: user.id,
+      title: "Withdrawal Request Sent for Admin Approval",
+      message: `Your M-Pesa withdrawal request of KSh ${amount.toLocaleString()} to ${mpesaNumber} is awaiting admin approval.`,
+      time: formatNowTimestamp(),
+      read: false,
+      type: "withdrawal",
+    };
+    setNotifications((prev) => [newNotif, ...prev]);
+    saveNotificationToFirestore(newNotif);
 
     return newWithdrawal;
   };
@@ -324,17 +319,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           .toUpperCase()
           .slice(0, 2);
       }
+      if (updated.id) {
+        updateUserInFirestore(updated.id, updated);
+      }
       return updated;
     });
   };
 
   const markAllNotificationsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    setNotifications((prev) =>
+      prev.map((n) => {
+        if (!n.read) {
+          const updated = { ...n, read: true };
+          saveNotificationToFirestore(updated);
+          return updated;
+        }
+        return n;
+      })
+    );
   };
 
   const markNotificationRead = (id: string) => {
     setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+      prev.map((n) => {
+        if (n.id === id) {
+          const updated = { ...n, read: true };
+          saveNotificationToFirestore(updated);
+          return updated;
+        }
+        return n;
+      })
     );
   };
 
@@ -412,55 +426,89 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const wasApproved = target.status === "Approved";
 
     setSubmissions((prev) =>
-      prev.map((s) =>
-        s.id === submissionId
-          ? { ...s, status, feedback: feedback ?? s.feedback }
-          : s
-      )
+      prev.map((s) => {
+        if (s.id === submissionId) {
+          const updated = {
+            ...s,
+            status,
+            feedback: feedback ?? s.feedback,
+          };
+          saveSubmissionToFirestore(updated);
+          return updated;
+        }
+        return s;
+      })
     );
 
-    if (target.userId === user.id) {
-      if (status === "Approved" && !wasApproved) {
+    const earner = allUsers.find((u) => u.id === target.userId);
+    if (status === "Approved" && !wasApproved) {
+      const updatedFields = {
+        availableBalance: (earner?.availableBalance ?? user.availableBalance) + target.reward,
+        totalEarnings: (earner?.totalEarnings ?? user.totalEarnings) + target.reward,
+        taskEarnings: (earner?.taskEarnings ?? user.taskEarnings) + target.reward,
+        pendingEarnings: Math.max(
+          0,
+          (earner?.pendingEarnings ?? user.pendingEarnings) - target.reward
+        ),
+        completedTasks: (earner?.completedTasks ?? user.completedTasks) + 1,
+      };
+
+      updateUserInFirestore(target.userId, updatedFields);
+      setAllUsers((prev) =>
+        prev.map((u) =>
+          u.id === target.userId ? { ...u, ...updatedFields } : u
+        )
+      );
+
+      if (target.userId === user.id) {
         setUser((prev) => ({
           ...prev,
-          availableBalance: prev.availableBalance + target.reward,
-          totalEarnings: prev.totalEarnings + target.reward,
-          taskEarnings: prev.taskEarnings + target.reward,
-          pendingEarnings: Math.max(0, prev.pendingEarnings - target.reward),
-          completedTasks: prev.completedTasks + 1,
+          ...updatedFields,
         }));
+      }
 
-        setTransactions((prev) => [
-          {
-            id: `txn-${Date.now().toString().slice(-4)}`,
-            reference: `TXN-2026-${Math.floor(10000 + Math.random() * 89999)}`,
-            date: "2026-11-12",
-            description: `Task Reward: ${target.taskTitle}`,
-            amount: target.reward,
-            type: "Task Reward",
-            status: "Completed",
-          },
-          ...prev,
-        ]);
+      const newTxn: Transaction = {
+        id: `txn-${Date.now().toString().slice(-5)}`,
+        userId: target.userId,
+        reference: `TXN-${Math.floor(10000 + Math.random() * 89999)}`,
+        date: new Date().toISOString().slice(0, 10),
+        description: `Task Reward: ${target.taskTitle}`,
+        amount: target.reward,
+        type: "Task Reward",
+        status: "Completed",
+      };
+      setTransactions((prev) => [newTxn, ...prev]);
+      saveTransactionToFirestore(newTxn);
 
-        setNotifications((prev) => [
-          {
-            id: `notif-${Date.now()}`,
-            title: `Task Approved (+KSh ${target.reward})`,
-            message: `Your submission for '${target.taskTitle}' was approved!`,
-            time: "Just now",
-            read: false,
-            type: "reward",
-          },
-          ...prev,
-        ]);
-      } else if (
-        (status === "Rejected" || status === "Revision Required") &&
-        target.status === "Pending Review"
-      ) {
+      const newNotif: NotificationItem = {
+        id: `notif-${Date.now()}`,
+        userId: target.userId,
+        title: `Task Approved (+KSh ${target.reward})`,
+        message: `Your submission for '${target.taskTitle}' was approved!`,
+        time: formatNowTimestamp(),
+        read: false,
+        type: "reward",
+      };
+      setNotifications((prev) => [newNotif, ...prev]);
+      saveNotificationToFirestore(newNotif);
+    } else if (
+      (status === "Rejected" || status === "Revision Required") &&
+      target.status === "Pending Review"
+    ) {
+      const nextPending = Math.max(
+        0,
+        (earner?.pendingEarnings ?? user.pendingEarnings) - target.reward
+      );
+      updateUserInFirestore(target.userId, { pendingEarnings: nextPending });
+      setAllUsers((prev) =>
+        prev.map((u) =>
+          u.id === target.userId ? { ...u, pendingEarnings: nextPending } : u
+        )
+      );
+      if (target.userId === user.id) {
         setUser((prev) => ({
           ...prev,
-          pendingEarnings: Math.max(0, prev.pendingEarnings - target.reward),
+          pendingEarnings: nextPending,
         }));
       }
     }
@@ -475,81 +523,102 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!target) return;
 
     setWithdrawals((prev) =>
-      prev.map((w) =>
-        w.id === withdrawalId
-          ? {
-              ...w,
-              status,
-              processedAt: "2026-11-12 12:55 PM",
-              notes: notes ?? w.notes,
-            }
-          : w
-      )
+      prev.map((w) => {
+        if (w.id === withdrawalId) {
+          const updated: Withdrawal = {
+            ...w,
+            status,
+            processedAt: formatNowTimestamp(),
+            notes: notes ?? w.notes,
+          };
+          saveWithdrawalToFirestore(updated);
+          return updated;
+        }
+        return w;
+      })
     );
 
     setTransactions((prev) =>
-      prev.map((t) =>
-        t.reference === target.reference
-          ? {
-              ...t,
-              status,
-              description:
-                status === "Completed"
-                  ? `M-Pesa Withdrawal Approved & Sent to ${target.mpesaNumber}`
-                  : status === "Failed"
-                  ? `M-Pesa Withdrawal Rejected (${target.mpesaNumber})`
-                  : t.description,
-            }
-          : t
-      )
+      prev.map((t) => {
+        if (t.reference === target.reference) {
+          const updated: Transaction = {
+            ...t,
+            status,
+            description:
+              status === "Completed"
+                ? `M-Pesa Withdrawal Approved & Sent to ${target.mpesaNumber}`
+                : status === "Failed"
+                ? `M-Pesa Withdrawal Rejected (${target.mpesaNumber})`
+                : t.description,
+          };
+          saveTransactionToFirestore(updated);
+          return updated;
+        }
+        return t;
+      })
     );
 
     if (status === "Completed" && target.status !== "Completed") {
-      if (target.userId === user.id) {
-        setNotifications((prev) => [
-          {
-            id: `notif-${Date.now()}`,
-            title: "Withdrawal Approved by Admin",
-            message: `Admin approved your KSh ${target.amount.toLocaleString()} withdrawal to ${target.mpesaNumber} (${target.reference}).`,
-            time: "Just now",
-            read: false,
-            type: "withdrawal",
-          },
-          ...prev,
-        ]);
-      }
+      const newNotif: NotificationItem = {
+        id: `notif-${Date.now()}`,
+        userId: target.userId,
+        title: "Withdrawal Approved by Admin",
+        message: `Admin approved your KSh ${target.amount.toLocaleString()} withdrawal to ${target.mpesaNumber} (${target.reference}).`,
+        time: formatNowTimestamp(),
+        read: false,
+        type: "withdrawal",
+      };
+      setNotifications((prev) => [newNotif, ...prev]);
+      saveNotificationToFirestore(newNotif);
     }
 
     if (status === "Failed" && target.status !== "Failed") {
+      const earner = allUsers.find((u) => u.id === target.userId);
+      const refundedBalance =
+        (earner?.availableBalance ?? user.availableBalance) + target.amount;
+
+      updateUserInFirestore(target.userId, {
+        availableBalance: refundedBalance,
+      });
+      setAllUsers((prev) =>
+        prev.map((u) =>
+          u.id === target.userId
+            ? { ...u, availableBalance: refundedBalance }
+            : u
+        )
+      );
+
       if (target.userId === user.id) {
         setUser((prev) => ({
           ...prev,
-          availableBalance: prev.availableBalance + target.amount,
+          availableBalance: refundedBalance,
         }));
-        setNotifications((prev) => [
-          {
-            id: `notif-${Date.now()}`,
-            title: "Withdrawal Request Declined",
-            message: `Your withdrawal request of KSh ${target.amount.toLocaleString()} (${target.reference}) was declined by admin and refunded to your Available Balance.`,
-            time: "Just now",
-            read: false,
-            type: "withdrawal",
-          },
-          ...prev,
-        ]);
       }
-      setTransactions((prev) => [
-        {
-          id: `txn-rev-${Date.now().toString().slice(-4)}`,
-          reference: `REV-${target.reference}`,
-          date: "2026-11-12",
-          description: `Reversal: Declined M-Pesa Withdrawal ${target.reference}`,
-          amount: target.amount,
-          type: "Withdrawal Reversal",
-          status: "Completed",
-        },
-        ...prev,
-      ]);
+
+      const newNotif: NotificationItem = {
+        id: `notif-${Date.now()}`,
+        userId: target.userId,
+        title: "Withdrawal Request Declined",
+        message: `Your withdrawal request of KSh ${target.amount.toLocaleString()} (${target.reference}) was declined by admin and refunded to your Available Balance.`,
+        time: formatNowTimestamp(),
+        read: false,
+        type: "withdrawal",
+      };
+      setNotifications((prev) => [newNotif, ...prev]);
+      saveNotificationToFirestore(newNotif);
+
+      const revTxn: Transaction = {
+        id: `txn-rev-${Date.now().toString().slice(-5)}`,
+        userId: target.userId,
+        reference: `REV-${target.reference}`,
+        date: new Date().toISOString().slice(0, 10),
+        description: `Reversal: Declined M-Pesa Withdrawal ${target.reference}`,
+        amount: target.amount,
+        type: "Withdrawal Reversal",
+        status: "Completed",
+      };
+      setTransactions((prev) => [revTxn, ...prev]);
+      saveTransactionToFirestore(revTxn);
     }
   };
 
@@ -558,30 +627,46 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   ) => {
     const newAd: Advertisement = {
       ...adData,
-      id: `ad-${Date.now().toString().slice(-4)}`,
-      impressions: 120,
-      clicks: 8,
+      id: `ad-${Date.now().toString().slice(-5)}`,
+      impressions: 0,
+      clicks: 0,
     };
     setAds((prev) => [newAd, ...prev]);
+    saveAdToFirestore(newAd);
   };
 
   const toggleAdActive = (adId: string) => {
     setAds((prev) =>
-      prev.map((a) => (a.id === adId ? { ...a, active: !a.active } : a))
+      prev.map((a) => {
+        if (a.id === adId) {
+          const updated = { ...a, active: !a.active };
+          saveAdToFirestore(updated);
+          return updated;
+        }
+        return a;
+      })
     );
   };
 
   const deleteAd = (adId: string) => {
     setAds((prev) => prev.filter((a) => a.id !== adId));
+    deleteAdFromFirestore(adId);
   };
 
   const recordAdClick = (adId: string) => {
     setAds((prev) =>
-      prev.map((a) =>
-        a.id === adId
-          ? { ...a, clicks: a.clicks + 1, impressions: a.impressions + 1 }
-          : a
-      )
+      prev.map((a) => {
+        if (a.id === adId) {
+          const updated = {
+            ...a,
+            clicks: a.clicks + 1,
+            impressions: a.impressions + 1,
+          };
+          saveAdToFirestore(updated);
+          return updated;
+        }
+        return a;
+      })
     );
   };
 

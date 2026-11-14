@@ -20,7 +20,9 @@ export default function EarningsPage() {
   const { user, transactions } = useApp();
 
   const rewardTransactions = transactions.filter(
-    (t) => t.type === "Task Reward" || t.type === "Referral Reward"
+    (t) =>
+      (!t.userId || t.userId === user.id) &&
+      (t.type === "Task Reward" || t.type === "Referral Reward")
   );
 
   return (

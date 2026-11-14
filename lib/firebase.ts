@@ -24,7 +24,17 @@ import {
   deleteDoc,
   collection,
 } from "firebase/firestore";
-import { Task, UserProfile, UserRole } from "./types";
+import {
+  Advertisement,
+  NotificationItem,
+  ReferralRecord,
+  Submission,
+  Task,
+  Transaction,
+  UserProfile,
+  UserRole,
+  Withdrawal,
+} from "./types";
 
 // Your web app's Firebase configuration loaded from .env
 const firebaseConfig = {
@@ -84,7 +94,7 @@ export async function saveUserToFirestore(
       existingData = snap.data() as Partial<UserProfile>;
     }
   } catch {
-    // Proceed even if offline or rules not yet configured
+    // Proceed even if offline
   }
 
   const displayName =
@@ -111,7 +121,7 @@ export async function saveUserToFirestore(
     }${fbUser.uid.slice(0, 3).toUpperCase()}`;
 
   const phoneVal =
-    extra?.phone || fbUser.phoneNumber || existingData.phone || "0712345678";
+    extra?.phone || fbUser.phoneNumber || existingData.phone || "";
 
   const role: UserRole = extra?.role || existingData.role || "user";
 
@@ -145,7 +155,6 @@ export async function saveUserToFirestore(
   };
 
   try {
-    // Remove undefined fields before writing to Firestore
     const cleanDoc = JSON.parse(JSON.stringify(userProfile));
     await setDoc(userRef, cleanDoc, { merge: true });
   } catch (err) {
@@ -216,23 +225,24 @@ export async function createAdminAccountInFirebase(params: {
 }
 
 /**
- * Update a user's role or status in Firestore `users` collection
+ * Update a user's fields in Firestore `users` collection
  */
 export async function updateUserInFirestore(
   userId: string,
   updates: Partial<UserProfile>
 ) {
+  if (!userId) return;
   try {
     const userRef = doc(db, "users", userId);
     const cleanUpdates = JSON.parse(JSON.stringify(updates));
-    await updateDoc(userRef, cleanUpdates);
+    await setDoc(userRef, cleanUpdates, { merge: true });
   } catch {
-    // Ignore if user only exists in local mock list
+    // Ignore
   }
 }
 
 /**
- * Save a task to Firestore `tasks` collection
+ * Tasks collection helpers
  */
 export async function saveTaskToFirestore(task: Task) {
   try {
@@ -244,9 +254,6 @@ export async function saveTaskToFirestore(task: Task) {
   }
 }
 
-/**
- * Fetch all tasks from Firestore `tasks` collection
- */
 export async function fetchAllTasksFromFirestore(): Promise<Task[]> {
   try {
     const snap = await getDocs(collection(db, "tasks"));
@@ -260,14 +267,181 @@ export async function fetchAllTasksFromFirestore(): Promise<Task[]> {
   }
 }
 
-/**
- * Delete a task from Firestore `tasks` collection
- */
 export async function deleteTaskFromFirestore(taskId: string) {
   try {
     await deleteDoc(doc(db, "tasks", taskId));
   } catch {
-    // Ignore if mock task
+    // Ignore
+  }
+}
+
+/**
+ * Submissions collection helpers
+ */
+export async function saveSubmissionToFirestore(sub: Submission) {
+  try {
+    const cleanSub = JSON.parse(JSON.stringify(sub));
+    await setDoc(doc(db, "submissions", sub.id), cleanSub, { merge: true });
+  } catch (err) {
+    console.warn("Firestore saveSubmissionToFirestore warning:", err);
+  }
+}
+
+export async function fetchAllSubmissionsFromFirestore(): Promise<
+  Submission[]
+> {
+  try {
+    const snap = await getDocs(collection(db, "submissions"));
+    const list: Submission[] = [];
+    snap.forEach((docSnap) => {
+      list.push(docSnap.data() as Submission);
+    });
+    return list;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Withdrawals collection helpers
+ */
+export async function saveWithdrawalToFirestore(wth: Withdrawal) {
+  try {
+    const cleanWth = JSON.parse(JSON.stringify(wth));
+    await setDoc(doc(db, "withdrawals", wth.id), cleanWth, { merge: true });
+  } catch (err) {
+    console.warn("Firestore saveWithdrawalToFirestore warning:", err);
+  }
+}
+
+export async function fetchAllWithdrawalsFromFirestore(): Promise<
+  Withdrawal[]
+> {
+  try {
+    const snap = await getDocs(collection(db, "withdrawals"));
+    const list: Withdrawal[] = [];
+    snap.forEach((docSnap) => {
+      list.push(docSnap.data() as Withdrawal);
+    });
+    return list;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Transactions collection helpers
+ */
+export async function saveTransactionToFirestore(txn: Transaction) {
+  try {
+    const cleanTxn = JSON.parse(JSON.stringify(txn));
+    await setDoc(doc(db, "transactions", txn.id), cleanTxn, { merge: true });
+  } catch (err) {
+    console.warn("Firestore saveTransactionToFirestore warning:", err);
+  }
+}
+
+export async function fetchAllTransactionsFromFirestore(): Promise<
+  Transaction[]
+> {
+  try {
+    const snap = await getDocs(collection(db, "transactions"));
+    const list: Transaction[] = [];
+    snap.forEach((docSnap) => {
+      list.push(docSnap.data() as Transaction);
+    });
+    return list;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Referrals collection helpers
+ */
+export async function saveReferralToFirestore(ref: ReferralRecord) {
+  try {
+    const cleanRef = JSON.parse(JSON.stringify(ref));
+    await setDoc(doc(db, "referrals", ref.id), cleanRef, { merge: true });
+  } catch (err) {
+    console.warn("Firestore saveReferralToFirestore warning:", err);
+  }
+}
+
+export async function fetchAllReferralsFromFirestore(): Promise<
+  ReferralRecord[]
+> {
+  try {
+    const snap = await getDocs(collection(db, "referrals"));
+    const list: ReferralRecord[] = [];
+    snap.forEach((docSnap) => {
+      list.push(docSnap.data() as ReferralRecord);
+    });
+    return list;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Advertisements collection helpers
+ */
+export async function saveAdToFirestore(ad: Advertisement) {
+  try {
+    const cleanAd = JSON.parse(JSON.stringify(ad));
+    await setDoc(doc(db, "ads", ad.id), cleanAd, { merge: true });
+  } catch (err) {
+    console.warn("Firestore saveAdToFirestore warning:", err);
+  }
+}
+
+export async function fetchAllAdsFromFirestore(): Promise<Advertisement[]> {
+  try {
+    const snap = await getDocs(collection(db, "ads"));
+    const list: Advertisement[] = [];
+    snap.forEach((docSnap) => {
+      list.push(docSnap.data() as Advertisement);
+    });
+    return list;
+  } catch {
+    return [];
+  }
+}
+
+export async function deleteAdFromFirestore(adId: string) {
+  try {
+    await deleteDoc(doc(db, "ads", adId));
+  } catch {
+    // Ignore
+  }
+}
+
+/**
+ * Notifications collection helpers
+ */
+export async function saveNotificationToFirestore(notif: NotificationItem) {
+  try {
+    const cleanNotif = JSON.parse(JSON.stringify(notif));
+    await setDoc(doc(db, "notifications", notif.id), cleanNotif, {
+      merge: true,
+    });
+  } catch {
+    // Ignore
+  }
+}
+
+export async function fetchAllNotificationsFromFirestore(): Promise<
+  NotificationItem[]
+> {
+  try {
+    const snap = await getDocs(collection(db, "notifications"));
+    const list: NotificationItem[] = [];
+    snap.forEach((docSnap) => {
+      list.push(docSnap.data() as NotificationItem);
+    });
+    return list;
+  } catch {
+    return [];
   }
 }
 
@@ -311,6 +485,37 @@ export async function registerWithEmail(
     referralCodeUsed,
     authProvider: "email",
   });
+
+  // If a referral code was provided, link it to the referrer in Firestore
+  if (referralCodeUsed?.trim()) {
+    try {
+      const code = referralCodeUsed.trim().toUpperCase();
+      const allUsers = await fetchAllUsersFromFirestore();
+      const referrer = allUsers.find(
+        (u) => u.referralCode?.toUpperCase() === code
+      );
+      if (referrer) {
+        const refRecord: ReferralRecord = {
+          id: `ref-${Date.now().toString().slice(-5)}`,
+          referrerId: referrer.id,
+          referrerName: referrer.name,
+          referrerCode: referrer.referralCode,
+          referredName: fullName.trim(),
+          referredPhone: phone || "",
+          registrationDate: new Date().toISOString().slice(0, 10),
+          tasksCompleted: 0,
+          status: "Pending First Task",
+          rewardEarned: 0,
+        };
+        await saveReferralToFirestore(refRecord);
+        await updateUserInFirestore(referrer.id, {
+          totalReferrals: (referrer.totalReferrals || 0) + 1,
+        });
+      }
+    } catch {
+      // Ignore referral lookup error
+    }
+  }
 
   await sendEmailVerification(credential.user);
   return credential.user;
@@ -398,5 +603,13 @@ export function getFirebaseAuthErrorMessage(error: unknown): string {
   }
 }
 
-export { app, auth, db, googleProvider, analytics, onAuthStateChanged };
+export {
+  app,
+  auth,
+  db,
+  googleProvider,
+  analytics,
+  onAuthStateChanged,
+  updateDoc,
+};
 export type { FirebaseUser };

@@ -45,18 +45,18 @@ export default function TaskDetailsPage() {
   const task = tasks.find((t) => t.id === params.id) || tasks[0];
 
   const existingSubmission = submissions.find(
-    (s) => s.taskId === task.id && s.userId === user.id
+    (s) => task && s.taskId === task.id && s.userId === user.id
   );
 
   const [activeFormat, setActiveFormat] = useState<SubmissionFormat>(
-    task.submissionFormat
+    task?.submissionFormat || "multiline_text"
   );
   const [downloadedNotice, setDownloadedNotice] = useState(false);
 
   // Form states for the 6 formats
   const [singleText, setSingleText] = useState("");
   const [multilineText, setMultilineText] = useState("");
-  const defaultColumns = task.tableColumns || [
+  const defaultColumns = task?.tableColumns || [
     "Item / Record",
     "Extracted Value",
     "Category / Unit",
@@ -66,7 +66,7 @@ export default function TaskDetailsPage() {
     Object.fromEntries(defaultColumns.map((col) => [col, ""])),
     Object.fromEntries(defaultColumns.map((col) => [col, ""])),
   ]);
-  const defaultFields = task.fields || [
+  const defaultFields = task?.fields || [
     {
       id: "referenceNo",
       label: "Document Reference / ID",
@@ -255,6 +255,23 @@ export default function TaskDetailsPage() {
   };
 
   const currentTaskStatus = justSubmittedStatus || existingSubmission?.status;
+
+  if (!task) {
+    return (
+      <div className="bg-white border border-slate-200 rounded-lg p-8 text-center space-y-3">
+        <p className="text-sm font-semibold text-slate-800">
+          Task not found or no tasks published yet.
+        </p>
+        <Link
+          href="/dashboard/tasks"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#16A34A] hover:underline"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Back to Available Tasks</span>
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -496,60 +513,6 @@ export default function TaskDetailsPage() {
                   verification.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  if (activeFormat === "multiline_text") {
-                    setMultilineText(
-                      "info@savannalogistics.co.ke\norders@kilimanifresh.co.ke\nhelp@kilimanifresh.co.ke\nsales@rvagrovet.com\nhello@amanitech.io\ntalent@amanitech.io\nops@mombasacargo.co.ke"
-                    );
-                  } else if (activeFormat === "text_input") {
-                    setSingleText(
-                      "Thika - 01000, Eldoret - 30100, Kisumu - 40100, Nyeri - 10100, Machakos - 90100"
-                    );
-                  } else if (activeFormat === "structured_table") {
-                    setTableRows([
-                      {
-                        [defaultColumns[0]]: "FRESH FRI COOKING OIL 2L",
-                        [defaultColumns[1]]: "1",
-                        [defaultColumns[2]]: "645.00",
-                        [defaultColumns[3]]: "645.00",
-                      },
-                      {
-                        [defaultColumns[0]]: "EXE ALL PURPOSE FLOUR 2KG",
-                        [defaultColumns[1]]: "2",
-                        [defaultColumns[2]]: "195.00",
-                        [defaultColumns[3]]: "390.00",
-                      },
-                    ]);
-                  } else if (activeFormat === "multiple_fields") {
-                    const demoObj: Record<string, string> = {};
-                    defaultFields.forEach((f, idx) => {
-                      demoObj[f.id] =
-                        idx === 0
-                          ? "WB-2026-8841"
-                          : idx === 1
-                          ? "Peter Njuguna"
-                          : idx === 2
-                          ? "Nakuru, Kenyatta Avenue"
-                          : "Received 14 cartons in good condition.";
-                    });
-                    setFieldValues(demoObj);
-                  } else {
-                    setSelectedFile({
-                      name:
-                        activeFormat === "pdf_upload"
-                          ? "Formatted_Task_Output_JK.pdf"
-                          : "Completed_Data_Sheet_JK.xlsx",
-                      size: "284 KB",
-                    });
-                  }
-                  setValidationError(null);
-                }}
-                className="text-xs font-semibold text-[#16A34A] bg-[#F0FDF4] hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-md cursor-pointer self-start sm:self-auto"
-              >
-                Auto-Fill Sample Answer
-              </button>
             </div>
 
             {/* Format Switcher Tabs (Supports all 6 required formats) */}
@@ -774,21 +737,6 @@ export default function TaskDetailsPage() {
                           className="hidden"
                         />
                       </label>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setSelectedFile({
-                            name:
-                              activeFormat === "pdf_upload"
-                                ? `${task.id}_Formatted_Submission.pdf`
-                                : `${task.id}_Completed_Entry.docx`,
-                            size: "320 KB",
-                          })
-                        }
-                        className="px-3.5 py-1.5 text-xs font-semibold bg-[#F0FDF4] text-[#14532D] border border-emerald-200 rounded-md hover:bg-emerald-100 cursor-pointer"
-                      >
-                        Attach Demo File
-                      </button>
                     </div>
                   </div>
                 </div>

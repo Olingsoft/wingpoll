@@ -13,7 +13,12 @@ interface DashboardHeaderProps {
 export function DashboardHeader({ onOpenMobileSidebar }: DashboardHeaderProps) {
   const { user } = useApp();
 
-  const formattedDate = "Thursday, 12 Nov 2026";
+  const formattedDate = new Date().toLocaleDateString("en-KE", {
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 
   return (
     <header className="sticky top-0 z-30 h-16 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between gap-4">

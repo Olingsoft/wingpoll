@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Bar,
   BarChart,
@@ -11,9 +11,40 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { EARNINGS_CHART_DATA } from "@/lib/mock-data";
+import { useApp } from "@/context/AppContext";
+
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export function EarningsChart() {
+  const { user, transactions } = useApp();
+
+  const chartData = useMemo(() => {
+    const userTxns = transactions.filter(
+      (t) =>
+        (!t.userId || t.userId === user.id) &&
+        t.status === "Completed" &&
+        (t.type === "Task Reward" || t.type === "Referral Reward")
+    );
+
+    const dayBuckets = DAYS.map((day) => ({
+      name: day,
+      taskEarnings: 0,
+      referralEarnings: 0,
+    }));
+
+    userTxns.forEach((t) => {
+      const parsed = new Date(t.date);
+      const dayIdx = Number.isNaN(parsed.getTime()) ? 0 : parsed.getDay();
+      if (t.type === "Task Reward") {
+        dayBuckets[dayIdx].taskEarnings += Math.max(0, t.amount);
+      } else if (t.type === "Referral Reward") {
+        dayBuckets[dayIdx].referralEarnings += Math.max(0, t.amount);
+      }
+    });
+
+    return dayBuckets;
+  }, [transactions, user.id]);
+
   return (
     <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5">
@@ -40,10 +71,14 @@ export function EarningsChart() {
       <div className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
-            data={EARNINGS_CHART_DATA}
+            data={chartData}
             margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="#E2E8F0"
+              vertical={false}
+            />
             <XAxis
               dataKey="name"
               tick={{ fontSize: 11, fill: "#64748B" }}
@@ -85,4 +120,3 @@ export function EarningsChart() {
     </div>
   );
 }
-

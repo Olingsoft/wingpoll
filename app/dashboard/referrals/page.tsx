@@ -10,8 +10,13 @@ import { StatusBadge } from "@/components/StatusBadge";
 export default function ReferralsPage() {
   const { user, referrals } = useApp();
 
-  const successfulCount = referrals.filter((r) => r.status === "Active").length;
-  const pendingCount = referrals.filter(
+  const userReferrals = referrals.filter(
+    (r) => !r.referrerId || r.referrerId === user.id
+  );
+  const successfulCount = userReferrals.filter(
+    (r) => r.status === "Active"
+  ).length;
+  const pendingCount = userReferrals.filter(
     (r) => r.status === "Pending First Task"
   ).length;
   const pendingRewardAmount = pendingCount * 50;
@@ -84,7 +89,7 @@ export default function ReferralsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
-                {referrals.map((ref) => (
+                {userReferrals.map((ref) => (
                   <tr
                     key={ref.id}
                     className="hover:bg-slate-50/80 transition-colors"

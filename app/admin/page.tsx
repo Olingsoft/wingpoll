@@ -1639,7 +1639,9 @@ export default function AdminDashboardPage() {
                             {ref.referredName} ({ref.referredPhone})
                           </td>
                           <td className="py-3.5 px-4 text-slate-600">
-                            John Kamau (KAMAU254)
+                            {ref.referrerName
+                              ? `${ref.referrerName} (${ref.referrerCode || ""})`
+                              : ref.referrerCode || "—"}
                           </td>
                           <td className="py-3.5 px-4 text-slate-500">
                             {ref.registrationDate}

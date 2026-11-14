@@ -5,12 +5,19 @@ import { Bell, CheckCheck } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 
 export function NotificationDropdown() {
-  const { notifications, markAllNotificationsRead, markNotificationRead } =
-    useApp();
+  const {
+    user,
+    notifications,
+    markAllNotificationsRead,
+    markNotificationRead,
+  } = useApp();
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const userNotifications = notifications.filter(
+    (n) => !n.userId || n.userId === user.id
+  );
+  const unreadCount = userNotifications.filter((n) => !n.read).length;
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -67,12 +74,12 @@ export function NotificationDropdown() {
           </div>
 
           <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
-            {notifications.length === 0 ? (
+            {userNotifications.length === 0 ? (
               <div className="p-6 text-center text-xs text-slate-500">
                 No notifications yet.
               </div>
             ) : (
-              notifications.map((item) => (
+              userNotifications.map((item) => (
                 <div
                   key={item.id}
                   onClick={() => markNotificationRead(item.id)}

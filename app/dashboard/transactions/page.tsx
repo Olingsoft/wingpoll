@@ -15,7 +15,7 @@ const TRANSACTION_TYPES: ("All" | TransactionType)[] = [
 ];
 
 export default function TransactionsPage() {
-  const { transactions } = useApp();
+  const { user, transactions } = useApp();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState<"All" | TransactionType>(
     "All"
@@ -25,6 +25,7 @@ export default function TransactionsPage() {
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter((txn) => {
+      if (txn.userId && txn.userId !== user.id) return false;
       if (selectedType !== "All" && txn.type !== selectedType) return false;
 
       if (searchQuery.trim()) {

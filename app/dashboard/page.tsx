@@ -25,6 +25,12 @@ export default function DashboardOverviewPage() {
   const userSubmissions = submissions
     .filter((s) => s.userId === user.id)
     .slice(0, 4);
+  const userTransactions = transactions.filter(
+    (t) => !t.userId || t.userId === user.id
+  );
+  const userReferrals = referrals.filter(
+    (r) => !r.referrerId || r.referrerId === user.id
+  );
 
   return (
     <div className="space-y-6">
@@ -118,10 +124,10 @@ export default function DashboardOverviewPage() {
             </div>
 
             <p className="text-xs text-slate-500">
-              {referrals.filter((r) => r.status === "Active").length} active
+              {userReferrals.filter((r) => r.status === "Active").length} active
               referrals •{" "}
               {
-                referrals.filter((r) => r.status === "Pending First Task")
+                userReferrals.filter((r) => r.status === "Pending First Task")
                   .length
               }{" "}
               pending first tasks
@@ -218,7 +224,7 @@ export default function DashboardOverviewPage() {
           </Link>
         </div>
 
-        <TransactionTable transactions={transactions} limit={5} />
+        <TransactionTable transactions={userTransactions} limit={5} />
       </div>
     </div>
   );
