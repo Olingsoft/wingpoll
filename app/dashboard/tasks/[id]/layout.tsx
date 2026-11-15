@@ -1,4 +1,6 @@
+import React, { Suspense } from "react";
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
@@ -8,11 +10,22 @@ export const metadata: Metadata = buildPageMetadata({
   noIndex: true,
 });
 
+async function DynamicRouteMarker() {
+  await connection();
+  return null;
+}
+
 export default function TaskDetailLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  return (
+    <>
+      <Suspense fallback={null}>
+        <DynamicRouteMarker />
+      </Suspense>
+      {children}
+    </>
+  );
 }
-
