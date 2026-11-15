@@ -214,6 +214,22 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* TOP LEADERBOARD AD SPACE */}
+        <section
+          aria-label="Sponsored Leaderboard"
+          className="py-5 bg-[#F8FAFC] border-b border-slate-200"
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <AdvertisementBanner
+              position="homepage_top_leaderboard"
+              showPlaceholder
+              placeholderFormat="728 × 90 Leaderboard"
+              placeholderTitle="Top Leaderboard Ad Space"
+              placeholderSubtitle="High-visibility horizontal placement directly below the hero banner for brand awareness and app installs."
+            />
+          </div>
+        </section>
+
         {/* HOW IT WORKS SECTION */}
         <section id="how-it-works" className="py-16 border-b border-slate-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -258,6 +274,22 @@ export default function HomePage() {
                 );
               })}
             </div>
+          </div>
+        </section>
+
+        {/* MID-PAGE PROMOTIONAL BANNER AD SPACE */}
+        <section
+          aria-label="Sponsored Promotion"
+          className="py-6 bg-[#F8FAFC] border-b border-slate-200"
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <AdvertisementBanner
+              position="homepage_promo"
+              showPlaceholder
+              placeholderFormat="Featured Promo Banner"
+              placeholderTitle="Featured Partner Banner Space"
+              placeholderSubtitle="Ideal for fintech wallets, mobile data bundles, training bootcamps, and Kenyan e-commerce offers."
+            />
           </div>
         </section>
 
@@ -368,10 +400,15 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Homepage Sponsored Banner & Video Ad Slots */}
-            <div className="space-y-4">
-              <AdvertisementBanner position="homepage_promo" />
-              <AdvertisementBanner position="task_list_video" />
+            {/* Homepage Sponsored Video Ad Spotlight */}
+            <div>
+              <AdvertisementBanner
+                position="homepage_video_spotlight"
+                showPlaceholder
+                placeholderFormat="16:9 Video Ad"
+                placeholderTitle="Sponsored Video Ad Spotlight"
+                placeholderSubtitle="Engage WingPoll earners with an interactive product demo, fintech walkthrough, or brand story."
+              />
             </div>
           </div>
         </section>
@@ -471,6 +508,44 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* NATIVE PARTNER CARDS AD SPACE (2-COLUMN) */}
+        <section
+          aria-label="Sponsored Partner Cards"
+          className="py-10 bg-[#F8FAFC] border-b border-slate-200"
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                Sponsored Partner Offers
+              </span>
+              <Link
+                href="/contact"
+                className="text-[11px] font-semibold text-[#16A34A] hover:underline"
+              >
+                Partner with WingPoll →
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <AdvertisementBanner
+                position="homepage_native_left"
+                compact
+                showPlaceholder
+                placeholderFormat="Native Card (Left)"
+                placeholderTitle="Partner Spotlight — Left Slot"
+                placeholderSubtitle="Feature a digital service, SACCO, or career tool in a clean native card."
+              />
+              <AdvertisementBanner
+                position="homepage_native_right"
+                compact
+                showPlaceholder
+                placeholderFormat="Native Card (Right)"
+                placeholderTitle="Partner Spotlight — Right Slot"
+                placeholderSubtitle="Reach verified Kenyan earners with targeted regional or fintech promotions."
+              />
+            </div>
+          </div>
+        </section>
+
         {/* FAQ SECTION */}
         <section className="py-16 bg-white border-b border-slate-200">
           <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -513,6 +588,22 @@ export default function HomePage() {
                 );
               })}
             </div>
+          </div>
+        </section>
+
+        {/* PRE-FOOTER WIDE BANNER AD SPACE */}
+        <section
+          aria-label="Sponsored Footer Banner"
+          className="py-8 bg-[#F8FAFC]"
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <AdvertisementBanner
+              position="homepage_bottom_banner"
+              showPlaceholder
+              placeholderFormat="970 × 250 Wide Banner"
+              placeholderTitle="Pre-Footer Wide Banner Space"
+              placeholderSubtitle="Capture high-intent visitors right before they sign up or explore more pages."
+            />
           </div>
         </section>
       </main>

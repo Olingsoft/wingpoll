@@ -136,7 +136,12 @@ export interface ReferralRecord {
 }
 
 export type AdPosition =
+  | "homepage_top_leaderboard"
   | "homepage_promo"
+  | "homepage_video_spotlight"
+  | "homepage_native_left"
+  | "homepage_native_right"
+  | "homepage_bottom_banner"
   | "dashboard_banner"
   | "task_list_banner"
   | "task_list_inline"

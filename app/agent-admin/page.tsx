@@ -42,11 +42,11 @@ const AGENT_ADMIN_NAV: {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
 }[] = [
-  { id: "overview", label: "Overview", icon: LayoutDashboard },
-  { id: "manage_tasks", label: "Manage Tasks", icon: Briefcase },
-  { id: "create_task", label: "Create Task", icon: PlusCircle },
-  { id: "submissions", label: "Task Submissions", icon: ClipboardCheck },
-];
+    { id: "overview", label: "Overview", icon: LayoutDashboard },
+    { id: "manage_tasks", label: "Manage Tasks", icon: Briefcase },
+    { id: "create_task", label: "Create Task", icon: PlusCircle },
+    { id: "submissions", label: "Task Submissions", icon: ClipboardCheck },
+  ];
 
 export default function AgentAdminPage() {
   const {
@@ -231,9 +231,9 @@ export default function AgentAdminPage() {
         sampleContentList.length > 0
           ? sampleContentList
           : [
-              `SAMPLE CONTENT FOR: ${taskTitle || "New Task"}`,
-              "1. Contact: info@kenyabusiness.co.ke | Tel: 0722 000 111",
-            ],
+            `SAMPLE CONTENT FOR: ${taskTitle || "New Task"}`,
+            "1. Contact: info@kenyabusiness.co.ke | Tel: 0722 000 111",
+          ],
     };
 
     if (editingTaskId) {
@@ -387,9 +387,8 @@ export default function AgentAdminPage() {
 
       {/* Agent Admin Sidebar */}
       <aside
-        className={`fixed top-0 left-0 z-50 h-screen w-64 bg-white border-r border-slate-200 flex flex-col transition-transform duration-200 lg:sticky lg:translate-x-0 ${
-          mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed top-0 left-0 z-50 h-screen w-64 bg-white border-r border-slate-200 flex flex-col transition-transform duration-200 lg:sticky lg:translate-x-0 ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
       >
         <div className="h-16 px-5 border-b border-slate-200 flex items-center justify-between">
           <div className="flex flex-col">
@@ -426,27 +425,24 @@ export default function AgentAdminPage() {
                   setActiveTab(item.id);
                   setMobileMenuOpen(false);
                 }}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
-                  active
-                    ? "bg-[#14532D] text-white"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                }`}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${active
+                  ? "bg-[#14532D] text-white"
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                  }`}
               >
                 <span className="flex items-center gap-2.5">
                   <Icon
-                    className={`w-4 h-4 ${
-                      active ? "text-emerald-300" : "text-slate-400"
-                    }`}
+                    className={`w-4 h-4 ${active ? "text-emerald-300" : "text-slate-400"
+                      }`}
                   />
                   <span>{item.label}</span>
                 </span>
                 {item.id === "submissions" && pendingSubmissionsCount > 0 && (
                   <span
-                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                      active
-                        ? "bg-white text-[#14532D]"
-                        : "bg-amber-100 text-amber-800"
-                    }`}
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${active
+                      ? "bg-white text-[#14532D]"
+                      : "bg-amber-100 text-amber-800"
+                      }`}
                   >
                     {pendingSubmissionsCount}
                   </span>
@@ -1090,11 +1086,10 @@ export default function AgentAdminPage() {
                       key={filterVal}
                       type="button"
                       onClick={() => setSubmissionFilter(filterVal)}
-                      className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
-                        submissionFilter === filterVal
-                          ? "bg-[#14532D] text-white"
-                          : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-                      }`}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors cursor-pointer ${submissionFilter === filterVal
+                        ? "bg-[#14532D] text-white"
+                        : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                        }`}
                     >
                       {filterVal === "ALL" ? "All" : filterVal}
                     </button>

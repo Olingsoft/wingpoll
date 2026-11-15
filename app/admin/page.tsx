@@ -2038,8 +2038,23 @@ export default function AdminDashboardPage() {
                         <option value="dashboard_section">
                           User Dashboard Content Section (dashboard_section)
                         </option>
+                        <option value="homepage_top_leaderboard">
+                          Landing Page Top Leaderboard (homepage_top_leaderboard)
+                        </option>
                         <option value="homepage_promo">
-                          Homepage Promotional Banner (homepage_promo)
+                          Landing Page Mid Promo Banner (homepage_promo)
+                        </option>
+                        <option value="homepage_video_spotlight">
+                          Landing Page Video Spotlight (homepage_video_spotlight)
+                        </option>
+                        <option value="homepage_native_left">
+                          Landing Page Native Card Left (homepage_native_left)
+                        </option>
+                        <option value="homepage_native_right">
+                          Landing Page Native Card Right (homepage_native_right)
+                        </option>
+                        <option value="homepage_bottom_banner">
+                          Landing Page Bottom Banner (homepage_bottom_banner)
                         </option>
                       </select>
                     </div>

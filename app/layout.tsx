@@ -84,9 +84,9 @@ export const metadata: Metadata = {
     images: [SITE_CONFIG.ogImage],
   },
   icons: {
-    icon: "/icon.png",
-    shortcut: "/icon.png",
-    apple: "/icon.png",
+    icon: "/en-ke/icon.png",
+    shortcut: "/en-ke/icon.png",
+    apple: "/en-ke/apple-icon.png",
   },
   ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
     ? {
