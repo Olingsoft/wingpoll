@@ -10,6 +10,11 @@ export function ReferralCard() {
   const [copiedLink, setCopiedLink] = useState(false);
   const [sharedNotice, setSharedNotice] = useState(false);
 
+  const activeReferralLink =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/register?ref=${user.referralCode}`
+      : user.referralLink;
+
   const handleCopyCode = () => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(user.referralCode);
@@ -20,7 +25,7 @@ export function ReferralCard() {
 
   const handleCopyLink = () => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(user.referralLink);
+      navigator.clipboard.writeText(activeReferralLink);
     }
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
@@ -29,7 +34,7 @@ export function ReferralCard() {
   const handleShare = () => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(
-        `Join me on Wingpoll and earn KSh completing simple digital tasks! Register here: ${user.referralLink}`
+        `Join me on Wingpoll and earn KSh completing simple digital tasks! Register here: ${activeReferralLink}`
       );
     }
     setSharedNotice(true);
@@ -91,7 +96,7 @@ export function ReferralCard() {
               Personal Referral Link
             </span>
             <span className="text-xs font-mono text-slate-700 truncate block">
-              {user.referralLink}
+              {activeReferralLink}
             </span>
           </div>
           <div className="flex items-center gap-2 shrink-0">

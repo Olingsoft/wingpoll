@@ -105,10 +105,16 @@ export default function AdminDashboardPage() {
     toggleAdActive,
     deleteAd,
     toggleUserStatus,
+    approveUserAccount,
+    updateUserAccountStatus,
+    grantReferralBonusManual,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<AdminSection>("overview");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userApprovalToast, setUserApprovalToast] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -182,6 +188,9 @@ export default function AdminDashboardPage() {
   // Overview Computed Metrics
   const totalRegisteredUsers = allUsers.length;
   const activeUsersCount = allUsers.filter((u) => u.status === "Active").length;
+  const pendingUsersCount = allUsers.filter(
+    (u) => u.status === "Pending Approval"
+  ).length;
   const totalTasksCount = tasks.length;
   const pendingSubmissionsCount = submissions.filter(
     (s) => s.status === "Pending Review"
@@ -581,6 +590,11 @@ export default function AdminDashboardPage() {
                 {item.id === "submissions" && pendingSubmissionsCount > 0 && (
                   <span className="px-1.5 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-800 rounded">
                     {pendingSubmissionsCount}
+                  </span>
+                )}
+                {item.id === "users" && pendingUsersCount > 0 && (
+                  <span className="px-1.5 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-800 rounded">
+                    {pendingUsersCount}
                   </span>
                 )}
                 {item.id === "withdrawals" && pendingWithdrawalsCount > 0 && (
@@ -1520,6 +1534,22 @@ export default function AdminDashboardPage() {
                 </form>
               </div>
 
+              {userApprovalToast && (
+                <div className="p-3.5 rounded-lg bg-[#F0FDF4] border border-emerald-200 text-xs font-semibold text-[#14532D] flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-[#16A34A] shrink-0" />
+                    <span>{userApprovalToast}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setUserApprovalToast(null)}
+                    className="p-1 text-emerald-800 hover:text-emerald-950 cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
               <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
@@ -1542,9 +1572,14 @@ export default function AdminDashboardPage() {
                             <p className="font-semibold text-slate-900">
                               {u.name}
                             </p>
-                            <span className="text-[11px] text-slate-400">
+                            <span className="text-[11px] text-slate-400 block">
                               {u.email}
                             </span>
+                            {u.referredByCode && (
+                              <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-[10px] font-semibold text-[#14532D]">
+                                Referred by: {u.referredByCode}
+                              </span>
+                            )}
                           </td>
                           <td className="py-3.5 px-4">
                             <span
@@ -1558,7 +1593,7 @@ export default function AdminDashboardPage() {
                             </span>
                           </td>
                           <td className="py-3.5 px-4 font-mono text-slate-700">
-                            {u.mpesaNumber}
+                            {u.mpesaNumber || u.phone || "—"}
                           </td>
                           <td className="py-3.5 px-4 font-bold text-[#16A34A]">
                             KSh {u.availableBalance.toLocaleString()}
@@ -1569,17 +1604,49 @@ export default function AdminDashboardPage() {
                           <td className="py-3.5 px-4 text-slate-600">
                             {u.completedTasks}
                           </td>
-                          <td className="py-3.5 px-4">
+                          <td className="py-3.5 px-4 whitespace-nowrap">
                             <StatusBadge status={u.status} />
                           </td>
-                          <td className="py-3.5 px-4 text-right">
-                            <button
-                              type="button"
-                              onClick={() => toggleUserStatus(u.id)}
-                              className="px-2.5 py-1 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded cursor-pointer"
-                            >
-                              {u.status === "Active" ? "Suspend" : "Activate"}
-                            </button>
+                          <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                            {u.status === "Pending Approval" ||
+                            u.status === "Rejected" ? (
+                              <div className="inline-flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    await approveUserAccount(u.id);
+                                    setUserApprovalToast(
+                                      u.referredByCode
+                                        ? `Approved ${u.name}'s account & granted KSh 50 referral bonus to referrer (${u.referredByCode})!`
+                                        : `Approved ${u.name}'s earner account! They can now access tasks.`
+                                    );
+                                  }}
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-[#16A34A] hover:bg-[#15803d] text-white rounded cursor-pointer shadow-2xs"
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                  <span>Approve Account</span>
+                                </button>
+                                {u.status !== "Rejected" && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      updateUserAccountStatus(u.id, "Rejected")
+                                    }
+                                    className="px-2.5 py-1.5 text-xs font-semibold bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 rounded cursor-pointer"
+                                  >
+                                    Reject
+                                  </button>
+                                )}
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => toggleUserStatus(u.id)}
+                                className="px-2.5 py-1 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded cursor-pointer"
+                              >
+                                {u.status === "Active" ? "Suspend" : "Activate"}
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -1598,8 +1665,8 @@ export default function AdminDashboardPage() {
                   Referral Program Management
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Monitor referral invitations, qualifying task progress, and
-                  KSh 50 commission payouts.
+                  Monitor referral invitations, account approvals, and KSh 50
+                  commission payouts.
                 </p>
               </div>
 
@@ -1614,35 +1681,60 @@ export default function AdminDashboardPage() {
                         <th className="py-3.5 px-4">Tasks Completed</th>
                         <th className="py-3.5 px-4">Status</th>
                         <th className="py-3.5 px-4 text-right">
-                          Commission Issued
+                          Commission / Action
                         </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-xs">
-                      {referrals.map((ref) => (
-                        <tr key={ref.id} className="hover:bg-slate-50/80">
-                          <td className="py-3.5 px-4 font-semibold text-slate-900">
-                            {ref.referredName} ({ref.referredPhone})
-                          </td>
-                          <td className="py-3.5 px-4 text-slate-600">
-                            {ref.referrerName
-                              ? `${ref.referrerName} (${ref.referrerCode || ""})`
-                              : ref.referrerCode || "—"}
-                          </td>
-                          <td className="py-3.5 px-4 text-slate-500">
-                            {ref.registrationDate}
-                          </td>
-                          <td className="py-3.5 px-4 text-slate-700">
-                            {ref.tasksCompleted} tasks
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <StatusBadge status={ref.status} />
-                          </td>
-                          <td className="py-3.5 px-4 text-right font-bold text-[#14532D]">
-                            KSh {ref.rewardEarned}
+                      {referrals.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={6}
+                            className="py-8 px-4 text-center text-slate-400"
+                          >
+                            No referrals recorded yet.
                           </td>
                         </tr>
-                      ))}
+                      ) : (
+                        referrals.map((ref) => (
+                          <tr key={ref.id} className="hover:bg-slate-50/80">
+                            <td className="py-3.5 px-4 font-semibold text-slate-900">
+                              {ref.referredName} ({ref.referredPhone})
+                            </td>
+                            <td className="py-3.5 px-4 text-slate-600">
+                              {ref.referrerName
+                                ? `${ref.referrerName} (${ref.referrerCode || ""})`
+                                : ref.referrerCode || "—"}
+                            </td>
+                            <td className="py-3.5 px-4 text-slate-500">
+                              {ref.registrationDate}
+                            </td>
+                            <td className="py-3.5 px-4 text-slate-700">
+                              {ref.tasksCompleted} tasks
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <StatusBadge status={ref.status} />
+                            </td>
+                            <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                              {ref.rewardEarned > 0 ? (
+                                <span className="font-bold text-[#14532D]">
+                                  KSh {ref.rewardEarned} Granted ✓
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    grantReferralBonusManual(ref.id)
+                                  }
+                                  className="px-3 py-1.5 text-xs font-semibold bg-[#16A34A] hover:bg-[#15803d] text-white rounded cursor-pointer"
+                                >
+                                  Grant KSh 50 Bonus
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>

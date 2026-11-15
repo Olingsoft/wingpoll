@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -55,7 +55,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { updateUserProfile } = useApp();
+  const { updateUserProfile, refreshUserProfile } = useApp();
   const [registeredSuccess, setRegisteredSuccess] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -63,6 +63,8 @@ export default function RegisterPage() {
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -76,6 +78,17 @@ export default function RegisterPage() {
       acceptTerms: false,
     },
   });
+
+  // Auto-populate referralCode from ?ref=CODE in URL when referred friend opens link
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const refParam = params.get("ref");
+      if (refParam) {
+        setValue("referralCode", refParam.trim().toUpperCase());
+      }
+    }
+  }, [setValue]);
 
   const onSubmit = async (data: RegisterFormValues) => {
     setAuthError(null);
@@ -94,8 +107,11 @@ export default function RegisterPage() {
         phone: data.phone,
         mpesaNumber: data.phone,
         role: "user",
+        status: "Pending Approval",
+        referredByCode: data.referralCode?.trim().toUpperCase() || undefined,
         authProvider: "email",
       });
+      await refreshUserProfile();
       setRegisteredSuccess(true);
       setTimeout(() => {
         router.push("/verify-email");
@@ -109,15 +125,9 @@ export default function RegisterPage() {
     setAuthError(null);
     setIsGoogleLoading(true);
     try {
-      const fbUser = await signInWithGooglePopup();
-      updateUserProfile({
-        id: fbUser.uid,
-        name: fbUser.displayName || "Google User",
-        email: fbUser.email || "",
-        photoURL: fbUser.photoURL || undefined,
-        role: "user",
-        authProvider: "google",
-      });
+      const currentRefCode = watch("referralCode");
+      await signInWithGooglePopup(currentRefCode);
+      await refreshUserProfile();
       setRegisteredSuccess(true);
       setTimeout(() => {
         router.push("/dashboard");

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { Suspense, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -25,7 +25,7 @@ import {
 import { useApp } from "@/context/AppContext";
 import { StatusBadge } from "@/components/StatusBadge";
 
-export default function AdminSubmissionReviewPage() {
+function AdminSubmissionReviewContent() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const {
@@ -588,6 +588,25 @@ export default function AdminSubmissionReviewPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function AdminSubmissionReviewPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-lg p-8 max-w-sm w-full text-center space-y-3 shadow-xs">
+            <Loader2 className="w-7 h-7 text-[#16A34A] animate-spin mx-auto" />
+            <p className="text-sm font-semibold text-slate-800">
+              Loading Submission Review...
+            </p>
+          </div>
+        </div>
+      }
+    >
+      <AdminSubmissionReviewContent />
+    </Suspense>
   );
 }
 
