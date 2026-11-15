@@ -113,6 +113,14 @@ export default function RootLayout({
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3984271218322436"
           crossOrigin="anonymous"
         />
+        <script
+          data-cfasync="false"
+          src="https://abscloud.org/1/7adfc76466f73edaa573b97b204a9561"
+        />
+        <script
+          data-cfasync="false"
+          src="https://bauval.org/14/08e451d279eff3066ce389c4216337f3"
+        />
       </head>
       <body className="min-h-full flex flex-col bg-[#F8FAFC] text-slate-900">
         <JsonLd data={[buildOrganizationSchema(), buildWebSiteSchema()]} />

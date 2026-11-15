@@ -25,6 +25,8 @@ import {
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { AdvertisementBanner } from "@/components/AdvertisementBanner";
+import { IframeBannerAd } from "@/components/IframeBannerAd";
+import { NativeAdBanner } from "@/components/NativeAdBanner";
 import { useApp } from "@/context/AppContext";
 
 const HOW_IT_WORKS_STEPS = [
@@ -219,14 +221,8 @@ export default function HomePage() {
           aria-label="Sponsored Leaderboard"
           className="py-5 bg-[#F8FAFC] border-b border-slate-200"
         >
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <AdvertisementBanner
-              position="homepage_top_leaderboard"
-              showPlaceholder
-              placeholderFormat="728 × 90 Leaderboard"
-              placeholderTitle="Top Leaderboard Ad Space"
-              placeholderSubtitle="High-visibility horizontal placement directly below the hero banner for brand awareness and app installs."
-            />
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
+            <IframeBannerAd />
           </div>
         </section>
 
@@ -525,6 +521,7 @@ export default function HomePage() {
                 Partner with WingPoll →
               </Link>
             </div>
+            <NativeAdBanner />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <AdvertisementBanner
                 position="homepage_native_left"
