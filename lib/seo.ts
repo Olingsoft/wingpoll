@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import type { BlogPost } from "./types";
 
+export const ROOT_DOMAIN = (
+  process.env.NEXT_PUBLIC_ROOT_URL || "https://wingpoll.co.ke"
+).replace(/\/$/, "");
+
 export const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL || "https://wingpoll.co.ke"
+  process.env.NEXT_PUBLIC_SITE_URL || `${ROOT_DOMAIN}/en-ke`
 ).replace(/\/$/, "");
 
 export const SITE_CONFIG = {
@@ -12,9 +16,9 @@ export const SITE_CONFIG = {
   description:
     "Complete simple digital microtasks in Kenya—data entry, image transcription, document formatting, and video extraction—and withdraw KSh earnings via M-Pesa.",
   defaultTitle: "WingPoll — Digital Microtask Earning Platform in Kenya",
-  ogImage: `${SITE_URL}/hero-bg.jpg`,
-  logo: `${SITE_URL}/WingPollLogo.png`,
-  icon: `${SITE_URL}/icon.png`,
+  ogImage: `${ROOT_DOMAIN}/hero-bg.jpg`,
+  logo: `${ROOT_DOMAIN}/WingPollLogo.png`,
+  icon: `${ROOT_DOMAIN}/icon.png`,
   email: "support@wingpoll.co.ke",
   locale: "en_KE",
   twitterHandle: "@wingpollke",
@@ -60,7 +64,7 @@ export function buildPageMetadata({
   const canonicalUrl = buildCanonicalUrl(path);
   const absoluteImage = image.startsWith("http")
     ? image
-    : `${SITE_URL}${image.startsWith("/") ? image : `/${image}`}`;
+    : `${ROOT_DOMAIN}${image.startsWith("/") ? image : `/${image}`}`;
 
   return {
     title,
@@ -183,7 +187,7 @@ export function buildBlogPostingSchema(post: BlogPost) {
   const url = buildCanonicalUrl(`/blogs/${post.slug}`);
   const imageUrl = post.featuredImage.startsWith("http")
     ? post.featuredImage
-    : `${SITE_URL}${
+    : `${ROOT_DOMAIN}${
         post.featuredImage.startsWith("/")
           ? post.featuredImage
           : `/${post.featuredImage}`
