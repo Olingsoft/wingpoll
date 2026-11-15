@@ -9,6 +9,7 @@ import {
   SubmissionStatus,
   Task,
   Transaction,
+  UserAccountStatus,
   UserProfile,
   Withdrawal,
   WithdrawalStatus,
@@ -30,12 +31,14 @@ import {
   fetchAllUsersFromFirestore,
   fetchAllWithdrawalsFromFirestore,
   FirebaseUser,
+  grantReferralRewardInFirestore,
   grantTaskRewardToUserInFirestore,
   logoutFirebase,
   onAuthStateChanged,
   reloadFirebaseUser,
   saveAdToFirestore,
   saveNotificationToFirestore,
+  saveReferralToFirestore,
   saveSubmissionToFirestore,
   saveTaskToFirestore,
   saveTransactionToFirestore,
@@ -53,6 +56,7 @@ interface AppContextType {
   logoutUser: () => Promise<void>;
   refreshEmailVerification: () => Promise<boolean>;
   resendEmailVerification: () => Promise<void>;
+  refreshUserProfile: () => Promise<UserProfile | null>;
   allUsers: UserProfile[];
   tasks: Task[];
   submissions: Submission[];
@@ -102,6 +106,12 @@ interface AppContextType {
   deleteAd: (adId: string) => void;
   recordAdClick: (adId: string) => void;
   toggleUserStatus: (userId: string) => void;
+  approveUserAccount: (userId: string) => Promise<void>;
+  updateUserAccountStatus: (
+    userId: string,
+    status: UserAccountStatus
+  ) => Promise<void>;
+  grantReferralBonusManual: (referralId: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -154,17 +164,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const savedProfile = await saveUserToFirestore(fbUser);
         setUser(savedProfile);
 
-        setAllUsers((prevUsers) => {
-          const idx = prevUsers.findIndex(
-            (u) => u.id === savedProfile.id || u.email === savedProfile.email
-          );
-          if (idx >= 0) {
-            const copy = [...prevUsers];
-            copy[idx] = { ...copy[idx], ...savedProfile };
-            return copy;
-          }
-          return [savedProfile, ...prevUsers];
-        });
+        const [latestUsers, latestReferrals] = await Promise.all([
+          fetchAllUsersFromFirestore(),
+          fetchAllReferralsFromFirestore(),
+        ]);
+        if (latestUsers.length > 0) {
+          setAllUsers(latestUsers);
+        } else {
+          setAllUsers((prevUsers) => {
+            const idx = prevUsers.findIndex(
+              (u) => u.id === savedProfile.id || u.email === savedProfile.email
+            );
+            if (idx >= 0) {
+              const copy = [...prevUsers];
+              copy[idx] = { ...copy[idx], ...savedProfile };
+              return copy;
+            }
+            return [savedProfile, ...prevUsers];
+          });
+        }
+        setReferrals(latestReferrals);
       } else {
         setUser(INITIAL_USER);
       }
@@ -197,6 +216,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const resendEmailVerification = async (): Promise<void> => {
     await sendVerificationEmail(auth.currentUser);
+  };
+
+  const refreshUserProfile = async (): Promise<UserProfile | null> => {
+    if (!auth.currentUser) return null;
+    const savedProfile = await saveUserToFirestore(auth.currentUser);
+    setUser(savedProfile);
+    const [latestUsers, latestReferrals] = await Promise.all([
+      fetchAllUsersFromFirestore(),
+      fetchAllReferralsFromFirestore(),
+    ]);
+    if (latestUsers.length > 0) setAllUsers(latestUsers);
+    setReferrals(latestReferrals);
+    return savedProfile;
   };
 
   const submitTask = (
@@ -581,6 +613,55 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       });
 
+      // Also update referral progress & grant referral commission if user was referred
+      grantReferralRewardInFirestore(target.userId, 50, true).then(
+        (refResult) => {
+          if (refResult) {
+            const {
+              referrerId,
+              updatedReferrerFields,
+              updatedReferralRecord,
+              transaction,
+              notification,
+            } = refResult;
+
+            if (Object.keys(updatedReferrerFields).length > 0) {
+              setAllUsers((prev) =>
+                prev.map((u) =>
+                  u.id === referrerId
+                    ? { ...u, ...updatedReferrerFields }
+                    : u.id === target.userId
+                    ? { ...u, referralRewardPaid: true }
+                    : u
+                )
+              );
+              if (user.id === referrerId) {
+                setUser((prev) => ({ ...prev, ...updatedReferrerFields }));
+              }
+            }
+
+            setReferrals((prev) => {
+              const exists = prev.some(
+                (r) => r.id === updatedReferralRecord.id
+              );
+              if (exists) {
+                return prev.map((r) =>
+                  r.id === updatedReferralRecord.id ? updatedReferralRecord : r
+                );
+              }
+              return [updatedReferralRecord, ...prev];
+            });
+
+            if (transaction) {
+              setTransactions((prev) => [transaction, ...prev]);
+            }
+            if (notification) {
+              setNotifications((prev) => [notification, ...prev]);
+            }
+          }
+        }
+      );
+
       const newTxn: Transaction = {
         id: `txn-${Date.now().toString().slice(-5)}`,
         userId: target.userId,
@@ -804,17 +885,166 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
-  const toggleUserStatus = (userId: string) => {
+  const updateUserAccountStatus = async (
+    userId: string,
+    nextStatus: UserAccountStatus
+  ) => {
     setAllUsers((prev) =>
-      prev.map((u) => {
-        if (u.id === userId) {
-          const nextStatus = u.status === "Active" ? "Suspended" : "Active";
-          updateUserInFirestore(userId, { status: nextStatus });
-          return { ...u, status: nextStatus };
-        }
-        return u;
-      })
+      prev.map((u) => (u.id === userId ? { ...u, status: nextStatus } : u))
     );
+    if (user.id === userId) {
+      setUser((prev) => ({ ...prev, status: nextStatus }));
+    }
+    await updateUserInFirestore(userId, { status: nextStatus });
+
+    const targetUser = allUsers.find((u) => u.id === userId);
+    const notif: NotificationItem = {
+      id: `notif-usr-${Date.now()}`,
+      userId,
+      title:
+        nextStatus === "Active"
+          ? "Account Approved by Admin!"
+          : nextStatus === "Rejected"
+          ? "Account Application Not Approved"
+          : `Account Status: ${nextStatus}`,
+      message:
+        nextStatus === "Active"
+          ? `Welcome ${
+              targetUser?.name || ""
+            }! Your WingPoll earner account has been approved by Admin. You can now access and complete tasks.`
+          : `Your account status has been updated to ${nextStatus} by Admin.`,
+      time: formatNowTimestamp(),
+      read: false,
+      type: "system",
+    };
+    setNotifications((prev) => [notif, ...prev]);
+    saveNotificationToFirestore(notif);
+
+    // When Admin approves a user account, automatically grant the referral reward (KSh 50) to their referrer!
+    if (nextStatus === "Active") {
+      const refResult = await grantReferralRewardInFirestore(userId, 50, false);
+      if (refResult) {
+        const {
+          referrerId,
+          updatedReferrerFields,
+          updatedReferralRecord,
+          transaction,
+          notification,
+        } = refResult;
+
+        if (Object.keys(updatedReferrerFields).length > 0) {
+          setAllUsers((prev) =>
+            prev.map((u) =>
+              u.id === referrerId
+                ? { ...u, ...updatedReferrerFields }
+                : u.id === userId
+                ? { ...u, referralRewardPaid: true }
+                : u
+            )
+          );
+          if (user.id === referrerId) {
+            setUser((prev) => ({ ...prev, ...updatedReferrerFields }));
+          }
+        }
+
+        setReferrals((prev) => {
+          const exists = prev.some((r) => r.id === updatedReferralRecord.id);
+          if (exists) {
+            return prev.map((r) =>
+              r.id === updatedReferralRecord.id ? updatedReferralRecord : r
+            );
+          }
+          return [updatedReferralRecord, ...prev];
+        });
+
+        if (transaction) {
+          setTransactions((prev) => [transaction, ...prev]);
+        }
+        if (notification) {
+          setNotifications((prev) => [notification, ...prev]);
+        }
+      }
+    }
+  };
+
+  const approveUserAccount = async (userId: string) => {
+    await updateUserAccountStatus(userId, "Active");
+  };
+
+  const toggleUserStatus = (userId: string) => {
+    const targetUser = allUsers.find((u) => u.id === userId);
+    const nextStatus: UserAccountStatus =
+      targetUser?.status === "Active" ? "Suspended" : "Active";
+    updateUserAccountStatus(userId, nextStatus);
+  };
+
+  const grantReferralBonusManual = async (referralId: string) => {
+    const refRecord = referrals.find((r) => r.id === referralId);
+    if (!refRecord || refRecord.rewardEarned > 0) return;
+
+    if (refRecord.referredUserId) {
+      const refResult = await grantReferralRewardInFirestore(
+        refRecord.referredUserId,
+        50,
+        false
+      );
+      if (refResult) {
+        const {
+          referrerId,
+          updatedReferrerFields,
+          updatedReferralRecord,
+          transaction,
+          notification,
+        } = refResult;
+
+        if (Object.keys(updatedReferrerFields).length > 0) {
+          setAllUsers((prev) =>
+            prev.map((u) =>
+              u.id === referrerId ? { ...u, ...updatedReferrerFields } : u
+            )
+          );
+          if (user.id === referrerId) {
+            setUser((prev) => ({ ...prev, ...updatedReferrerFields }));
+          }
+        }
+        setReferrals((prev) =>
+          prev.map((r) => (r.id === referralId ? updatedReferralRecord : r))
+        );
+        if (transaction) setTransactions((prev) => [transaction, ...prev]);
+        if (notification) setNotifications((prev) => [notification, ...prev]);
+        return;
+      }
+    }
+
+    // Fallback if referral record did not have referredUserId
+    const bonusAmount = 50;
+    const updatedRecord: ReferralRecord = {
+      ...refRecord,
+      status: "Active",
+      rewardEarned: bonusAmount,
+    };
+    setReferrals((prev) =>
+      prev.map((r) => (r.id === referralId ? updatedRecord : r))
+    );
+    saveReferralToFirestore(updatedRecord);
+
+    if (refRecord.referrerId) {
+      const referrer = allUsers.find((u) => u.id === refRecord.referrerId);
+      const updatedFields = {
+        availableBalance: (referrer?.availableBalance ?? 0) + bonusAmount,
+        totalEarnings: (referrer?.totalEarnings ?? 0) + bonusAmount,
+        referralEarnings: (referrer?.referralEarnings ?? 0) + bonusAmount,
+      };
+      await updateUserInFirestore(refRecord.referrerId, updatedFields);
+      setAllUsers((prev) =>
+        prev.map((u) =>
+          u.id === refRecord.referrerId ? { ...u, ...updatedFields } : u
+        )
+      );
+      if (user.id === refRecord.referrerId) {
+        setUser((prev) => ({ ...prev, ...updatedFields }));
+      }
+    }
   };
 
   return (
@@ -827,6 +1057,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         logoutUser,
         refreshEmailVerification,
         resendEmailVerification,
+        refreshUserProfile,
         allUsers,
         tasks,
         submissions,
@@ -854,6 +1085,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         deleteAd,
         recordAdClick,
         toggleUserStatus,
+        approveUserAccount,
+        updateUserAccountStatus,
+        grantReferralBonusManual,
       }}
     >
       {children}

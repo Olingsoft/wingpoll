@@ -124,6 +124,8 @@ export async function saveUserToFirestore(
     extra?.phone || fbUser.phoneNumber || existingData.phone || "";
 
   const role: UserRole = extra?.role || existingData.role || "user";
+  const defaultStatus =
+    role === "admin" ? "Active" : ("Pending Approval" as const);
 
   const userProfile: UserProfile = {
     id: fbUser.uid,
@@ -149,9 +151,15 @@ export async function saveUserToFirestore(
     taskEarnings: existingData.taskEarnings ?? 0,
     referralCode: refCode,
     referralLink: `https://wingpoll.co.ke/register?ref=${refCode}`,
+    referredByCode:
+      extra?.referralCodeUsed?.trim().toUpperCase() ||
+      existingData.referredByCode ||
+      undefined,
+    referredByUserId: existingData.referredByUserId || undefined,
+    referralRewardPaid: existingData.referralRewardPaid ?? false,
     joinedDate:
       existingData.joinedDate || new Date().toISOString().slice(0, 10),
-    status: existingData.status || "Active",
+    status: existingData.status || defaultStatus,
   };
 
   try {
@@ -514,9 +522,268 @@ export async function loginWithEmail(email: string, password: string) {
 }
 
 /**
+ * Link a newly registered user to their referrer and create a ReferralRecord in Firestore
+ */
+export async function linkReferralOnRegistration(
+  newUser: UserProfile,
+  referralCodeUsed?: string
+): Promise<ReferralRecord | null> {
+  const cleanCode = (referralCodeUsed || newUser.referredByCode || "")
+    .trim()
+    .toUpperCase();
+  if (!cleanCode) return null;
+
+  try {
+    const allUsers = await fetchAllUsersFromFirestore();
+    const referrer = allUsers.find(
+      (u) =>
+        u.referralCode?.toUpperCase() === cleanCode && u.id !== newUser.id
+    );
+    if (!referrer) return null;
+
+    // Check if a ReferralRecord already exists for this referred user
+    const existingReferrals = await fetchAllReferralsFromFirestore();
+    const existingRecord = existingReferrals.find(
+      (r) =>
+        r.referredUserId === newUser.id ||
+        (newUser.email &&
+          r.referredEmail?.toLowerCase() === newUser.email.toLowerCase())
+    );
+    if (existingRecord) return existingRecord;
+
+    const refRecord: ReferralRecord = {
+      id: `ref-${newUser.id.slice(0, 8)}`,
+      referrerId: referrer.id,
+      referrerName: referrer.name,
+      referrerCode: referrer.referralCode,
+      referredUserId: newUser.id,
+      referredEmail: newUser.email,
+      referredName: newUser.name,
+      referredPhone: newUser.phone || "—",
+      registrationDate: new Date().toISOString().slice(0, 10),
+      tasksCompleted: 0,
+      status: "Pending Approval",
+      rewardEarned: 0,
+    };
+
+    await saveReferralToFirestore(refRecord);
+
+    // Save referrer link on the referred user's document
+    await updateUserInFirestore(newUser.id, {
+      referredByCode: referrer.referralCode,
+      referredByUserId: referrer.id,
+      referralRewardPaid: false,
+    });
+
+    // Increment totalReferrals on the referrer's user document
+    const referrerRef = doc(db, "users", referrer.id);
+    const referrerSnap = await getDoc(referrerRef);
+    const referrerData = referrerSnap.exists()
+      ? (referrerSnap.data() as Partial<UserProfile>)
+      : {};
+    await setDoc(
+      referrerRef,
+      {
+        totalReferrals: Number(referrerData.totalReferrals ?? 0) + 1,
+      },
+      { merge: true }
+    );
+
+    return refRecord;
+  } catch (err) {
+    console.warn("Firestore linkReferralOnRegistration warning:", err);
+    return null;
+  }
+}
+
+/**
+ * Reliably grant the referral reward (default KSh 50) to the referrer's Firestore account
+ * when a referred user is approved by Admin (or completes a task), ensuring it is paid once.
+ */
+export async function grantReferralRewardInFirestore(
+  referredUserId: string,
+  bonusAmount = 50,
+  incrementTaskCount = false
+): Promise<{
+  referrerId: string;
+  updatedReferrerFields: Partial<UserProfile>;
+  updatedReferralRecord: ReferralRecord;
+  transaction?: Transaction;
+  notification?: NotificationItem;
+} | null> {
+  if (!referredUserId) return null;
+
+  try {
+    const referredRef = doc(db, "users", referredUserId);
+    const referredSnap = await getDoc(referredRef);
+    const referredData = referredSnap.exists()
+      ? (referredSnap.data() as Partial<UserProfile>)
+      : {};
+
+    const allReferrals = await fetchAllReferralsFromFirestore();
+    let refRecord = allReferrals.find(
+      (r) =>
+        r.referredUserId === referredUserId ||
+        (referredData.email &&
+          r.referredEmail &&
+          r.referredEmail.toLowerCase() === referredData.email.toLowerCase()) ||
+        (referredData.name && r.referredName === referredData.name)
+    );
+
+    const referrerId = refRecord?.referrerId || referredData.referredByUserId;
+
+    // If the user has referredByCode on their profile but no referral record yet, look up referrer by code
+    let resolvedReferrerId = referrerId;
+    let resolvedReferrerName = refRecord?.referrerName || "";
+    let resolvedReferrerCode =
+      refRecord?.referrerCode || referredData.referredByCode || "";
+
+    if (!resolvedReferrerId && resolvedReferrerCode) {
+      const allUsers = await fetchAllUsersFromFirestore();
+      const foundReferrer = allUsers.find(
+        (u) =>
+          u.referralCode?.toUpperCase() ===
+            resolvedReferrerCode.toUpperCase() && u.id !== referredUserId
+      );
+      if (foundReferrer) {
+        resolvedReferrerId = foundReferrer.id;
+        resolvedReferrerName = foundReferrer.name;
+        resolvedReferrerCode = foundReferrer.referralCode;
+      }
+    }
+
+    if (!resolvedReferrerId) return null;
+
+    const alreadyPaid =
+      Boolean(referredData.referralRewardPaid) ||
+      Boolean(refRecord && refRecord.rewardEarned > 0);
+
+    const nextTasksCompleted = refRecord
+      ? refRecord.tasksCompleted + (incrementTaskCount ? 1 : 0)
+      : incrementTaskCount
+      ? 1
+      : 0;
+
+    if (alreadyPaid) {
+      if (refRecord && incrementTaskCount) {
+        const updatedRecord: ReferralRecord = {
+          ...refRecord,
+          tasksCompleted: nextTasksCompleted,
+          status: "Active",
+        };
+        await saveReferralToFirestore(updatedRecord);
+        return {
+          referrerId: resolvedReferrerId,
+          updatedReferrerFields: {},
+          updatedReferralRecord: updatedRecord,
+        };
+      }
+      return null;
+    }
+
+    // Read referrer's user document and credit KSh bonusAmount
+    const referrerRef = doc(db, "users", resolvedReferrerId);
+    const referrerSnap = await getDoc(referrerRef);
+    const referrerData = referrerSnap.exists()
+      ? (referrerSnap.data() as Partial<UserProfile>)
+      : {};
+
+    const updatedReferrerFields: Partial<UserProfile> = {
+      availableBalance: Number(referrerData.availableBalance ?? 0) + bonusAmount,
+      totalEarnings: Number(referrerData.totalEarnings ?? 0) + bonusAmount,
+      referralEarnings: Number(referrerData.referralEarnings ?? 0) + bonusAmount,
+    };
+
+    await setDoc(referrerRef, updatedReferrerFields, { merge: true });
+    await setDoc(
+      referredRef,
+      {
+        referredByUserId: resolvedReferrerId,
+        referredByCode: resolvedReferrerCode,
+        referralRewardPaid: true,
+      },
+      { merge: true }
+    );
+
+    const updatedReferralRecord: ReferralRecord = refRecord
+      ? {
+          ...refRecord,
+          referrerId: resolvedReferrerId,
+          referrerName: resolvedReferrerName || refRecord.referrerName,
+          referrerCode: resolvedReferrerCode || refRecord.referrerCode,
+          referredUserId,
+          tasksCompleted: nextTasksCompleted,
+          status: "Active",
+          rewardEarned: bonusAmount,
+        }
+      : {
+          id: `ref-${referredUserId.slice(0, 8)}`,
+          referrerId: resolvedReferrerId,
+          referrerName: resolvedReferrerName || referrerData.name || "Referrer",
+          referrerCode: resolvedReferrerCode || referrerData.referralCode || "",
+          referredUserId,
+          referredEmail: referredData.email || "",
+          referredName: referredData.name || "Referred Earner",
+          referredPhone: referredData.phone || "—",
+          registrationDate:
+            referredData.joinedDate || new Date().toISOString().slice(0, 10),
+          tasksCompleted: nextTasksCompleted,
+          status: "Active",
+          rewardEarned: bonusAmount,
+        };
+
+    await saveReferralToFirestore(updatedReferralRecord);
+
+    const transaction: Transaction = {
+      id: `txn-ref-${Date.now().toString().slice(-5)}`,
+      userId: resolvedReferrerId,
+      reference: `REF-${Math.floor(10000 + Math.random() * 89999)}`,
+      date: new Date().toISOString().slice(0, 10),
+      description: `Referral Commission: Invited ${
+        referredData.name || updatedReferralRecord.referredName
+      }`,
+      amount: bonusAmount,
+      type: "Referral Reward",
+      status: "Completed",
+    };
+    await saveTransactionToFirestore(transaction);
+
+    const notification: NotificationItem = {
+      id: `notif-ref-${Date.now()}`,
+      userId: resolvedReferrerId,
+      title: `Referral Bonus Credited (+KSh ${bonusAmount})`,
+      message: `You earned KSh ${bonusAmount} referral commission for inviting ${
+        referredData.name || updatedReferralRecord.referredName
+      }! Credited to your Available Balance.`,
+      time: new Date().toLocaleString("en-KE", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      read: false,
+      type: "referral",
+    };
+    await saveNotificationToFirestore(notification);
+
+    return {
+      referrerId: resolvedReferrerId,
+      updatedReferrerFields,
+      updatedReferralRecord,
+      transaction,
+      notification,
+    };
+  } catch (err) {
+    console.warn("Firestore grantReferralRewardInFirestore warning:", err);
+    return null;
+  }
+}
+
+/**
  * Register a new normal user account with Email & Password, set Display Name,
- * save user to Firestore `users` table with role="user",
- * and automatically send a Firebase Email Verification link
+ * save user to Firestore `users` table with role="user" and status="Pending Approval",
+ * link referral code if provided, and send a Firebase Email Verification link
  */
 export async function registerWithEmail(
   fullName: string,
@@ -536,8 +803,8 @@ export async function registerWithEmail(
     });
   }
 
-  // Save normal user to Firestore `users` collection with role="user"
-  await saveUserToFirestore(credential.user, {
+  // Save normal user to Firestore `users` collection with role="user" (status="Pending Approval")
+  const newUserProfile = await saveUserToFirestore(credential.user, {
     fullName,
     phone,
     role: "user",
@@ -547,33 +814,7 @@ export async function registerWithEmail(
 
   // If a referral code was provided, link it to the referrer in Firestore
   if (referralCodeUsed?.trim()) {
-    try {
-      const code = referralCodeUsed.trim().toUpperCase();
-      const allUsers = await fetchAllUsersFromFirestore();
-      const referrer = allUsers.find(
-        (u) => u.referralCode?.toUpperCase() === code
-      );
-      if (referrer) {
-        const refRecord: ReferralRecord = {
-          id: `ref-${Date.now().toString().slice(-5)}`,
-          referrerId: referrer.id,
-          referrerName: referrer.name,
-          referrerCode: referrer.referralCode,
-          referredName: fullName.trim(),
-          referredPhone: phone || "",
-          registrationDate: new Date().toISOString().slice(0, 10),
-          tasksCompleted: 0,
-          status: "Pending First Task",
-          rewardEarned: 0,
-        };
-        await saveReferralToFirestore(refRecord);
-        await updateUserInFirestore(referrer.id, {
-          totalReferrals: (referrer.totalReferrals || 0) + 1,
-        });
-      }
-    } catch {
-      // Ignore referral lookup error
-    }
+    await linkReferralOnRegistration(newUserProfile, referralCodeUsed);
   }
 
   await sendEmailVerification(credential.user);
@@ -603,11 +844,15 @@ export async function reloadFirebaseUser(): Promise<boolean> {
 /**
  * Sign in or Register with Google (Gmail) Popup and save user to Firestore `users` table
  */
-export async function signInWithGooglePopup() {
+export async function signInWithGooglePopup(referralCodeUsed?: string) {
   const credential = await signInWithPopup(auth, googleProvider);
-  await saveUserToFirestore(credential.user, {
+  const profile = await saveUserToFirestore(credential.user, {
     authProvider: "google",
+    referralCodeUsed,
   });
+  if (referralCodeUsed?.trim()) {
+    await linkReferralOnRegistration(profile, referralCodeUsed);
+  }
   return credential.user;
 }
 

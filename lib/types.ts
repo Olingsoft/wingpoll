@@ -125,11 +125,13 @@ export interface ReferralRecord {
   referrerId?: string;
   referrerName?: string;
   referrerCode?: string;
+  referredUserId?: string;
+  referredEmail?: string;
   referredName: string;
   referredPhone: string;
   registrationDate: string;
   tasksCompleted: number;
-  status: "Active" | "Pending First Task";
+  status: "Active" | "Pending Approval" | "Pending First Task";
   rewardEarned: number;
 }
 
@@ -165,6 +167,12 @@ export interface Advertisement {
 
 export type UserRole = "user" | "admin";
 
+export type UserAccountStatus =
+  | "Pending Approval"
+  | "Active"
+  | "Suspended"
+  | "Rejected";
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -184,8 +192,11 @@ export interface UserProfile {
   taskEarnings: number;
   referralCode: string;
   referralLink: string;
+  referredByCode?: string;
+  referredByUserId?: string;
+  referralRewardPaid?: boolean;
   joinedDate: string;
-  status: "Active" | "Suspended";
+  status: UserAccountStatus;
 }
 
 export interface NotificationItem {

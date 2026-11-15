@@ -21,6 +21,7 @@ export function StatusBadge({ status, size = "sm" }: StatusBadgeProps) {
     dotColor = "bg-[#16A34A]";
   } else if (
     normalized === "pending review" ||
+    normalized === "pending approval" ||
     normalized === "processing" ||
     normalized === "pending" ||
     normalized === "pending first task" ||
