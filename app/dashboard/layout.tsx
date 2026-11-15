@@ -5,11 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   AlertCircle,
+  CheckCircle2,
   Clock,
   Loader2,
   LogOut,
   MailCheck,
   RefreshCw,
+  Send,
   ShieldAlert,
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
@@ -86,7 +88,91 @@ export default function DashboardLayout({
     );
   }
 
-  // Gate non-admin users whose account is Pending Approval, Suspended, or Rejected
+  // Step 1 Gate: Non-admin users MUST verify their email address first
+  if (firebaseUser && user.role !== "admin" && !emailVerified) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
+        <div className="bg-white border border-slate-200 rounded-lg p-6 sm:p-8 max-w-lg w-full space-y-5 shadow-xs">
+          {/* 2-Step Onboarding Progress Indicator */}
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-md border font-semibold bg-amber-50 border-amber-300 text-amber-900">
+              <span className="w-5 h-5 rounded-full bg-amber-500 text-white text-[11px] font-bold flex items-center justify-center shrink-0">
+                1
+              </span>
+              <span>1. Verify Email</span>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-md border font-semibold bg-slate-50 border-slate-200 text-slate-400">
+              <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-600 text-[11px] font-bold flex items-center justify-center shrink-0">
+                2
+              </span>
+              <span>2. Admin Activation</span>
+            </div>
+          </div>
+
+          <div className="text-center space-y-2">
+            <div className="w-14 h-14 rounded-full bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto">
+              <MailCheck className="w-7 h-7" />
+            </div>
+            <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+              Step 1 of 2: Email Verification Required
+            </span>
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900">
+              Verify Your Email Address
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              We sent a verification link to{" "}
+              <strong className="text-slate-900">
+                {firebaseUser.email || user.email}
+              </strong>
+              . Please click the link in your inbox (or spam folder) to verify
+              your email before proceeding to admin account activation.
+            </p>
+          </div>
+
+          {bannerNotice && (
+            <div className="p-3 rounded-md bg-[#F0FDF4] border border-emerald-200 text-xs font-semibold text-[#14532D] text-center">
+              {bannerNotice}
+            </div>
+          )}
+
+          <div className="space-y-2.5 pt-1">
+            <button
+              type="button"
+              onClick={handleQuickRefresh}
+              className="w-full py-2.5 px-4 bg-[#16A34A] hover:bg-[#15803d] text-white text-xs font-semibold rounded-md flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>I&apos;ve Verified My Email — Continue</span>
+            </button>
+
+            <div className="flex flex-col sm:flex-row items-center gap-2.5">
+              <button
+                type="button"
+                onClick={handleQuickResend}
+                className="w-full sm:flex-1 py-2.5 px-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-md flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>Resend Verification Email</span>
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  await logoutUser();
+                  router.push("/login");
+                }}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Step 2 Gate: After email is verified, gate non-admin users whose account is Pending Approval, Suspended, or Rejected
   if (
     firebaseUser &&
     user.role !== "admin" &&
@@ -96,6 +182,22 @@ export default function DashboardLayout({
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
         <div className="bg-white border border-slate-200 rounded-lg p-6 sm:p-8 max-w-lg w-full space-y-5 shadow-xs">
+          {/* 2-Step Onboarding Progress Indicator */}
+          {isPending && (
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-md border font-semibold bg-[#F0FDF4] border-emerald-300 text-[#14532D]">
+                <CheckCircle2 className="w-4 h-4 text-[#16A34A] shrink-0" />
+                <span>1. Email Verified ✓</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-2 rounded-md border font-semibold bg-amber-50 border-amber-300 text-amber-900">
+                <span className="w-5 h-5 rounded-full bg-amber-500 text-white text-[11px] font-bold flex items-center justify-center shrink-0">
+                  2
+                </span>
+                <span>2. Admin Activation</span>
+              </div>
+            </div>
+          )}
+
           <div className="text-center space-y-2">
             <div
               className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto border ${
@@ -115,16 +217,16 @@ export default function DashboardLayout({
             </div>
             <h1 className="text-lg sm:text-xl font-bold text-slate-900">
               {isPending
-                ? "Account Pending Admin Approval"
+                ? "Step 2 of 2: Waiting for Admin Account Activation"
                 : `Account ${user.status}`}
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
               {isPending ? (
                 <>
-                  Hello <strong>{user.name}</strong>! Your WingPoll earner
-                  account has been created and is currently waiting for an
-                  administrator to review and approve your registration before
-                  you can access tasks.
+                  Hello <strong>{user.name}</strong>! Your email is verified.
+                  Your WingPoll earner account is now waiting for an
+                  administrator to activate your account before you can access
+                  the dashboard and start earning.
                 </>
               ) : (
                 <>
@@ -162,40 +264,18 @@ export default function DashboardLayout({
               </div>
             )}
             <div className="flex justify-between">
-              <span className="text-slate-500">Email Verification:</span>
-              <span
-                className={`font-semibold ${
-                  emailVerified ? "text-[#16A34A]" : "text-amber-700"
-                }`}
-              >
-                {emailVerified ? "Verified ✓" : "Pending Verification"}
+              <span className="text-slate-500">Step 1 (Email Verification):</span>
+              <span className="font-semibold text-[#16A34A]">
+                Verified ✓
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">Step 2 (Admin Activation):</span>
+              <span className="font-semibold text-amber-700">
+                {user.status}
               </span>
             </div>
           </div>
-
-          {!emailVerified && (
-            <div className="p-3.5 rounded-md bg-amber-50 border border-amber-200 text-xs text-amber-900 flex flex-wrap items-center justify-between gap-2">
-              <span>
-                Verify your email while waiting for admin approval.
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleQuickResend}
-                  className="px-2.5 py-1 rounded bg-white border border-amber-300 font-semibold cursor-pointer"
-                >
-                  Resend Email
-                </button>
-                <button
-                  type="button"
-                  onClick={handleQuickRefresh}
-                  className="px-2.5 py-1 rounded bg-[#16A34A] text-white font-semibold cursor-pointer"
-                >
-                  I&apos;ve Verified
-                </button>
-              </div>
-            </div>
-          )}
 
           {bannerNotice && (
             <div className="p-3 rounded-md bg-[#F0FDF4] border border-emerald-200 text-xs font-semibold text-[#14532D] text-center">
@@ -217,8 +297,8 @@ export default function DashboardLayout({
               />
               <span>
                 {isCheckingApproval
-                  ? "Checking Approval Status..."
-                  : "Check Approval Status"}
+                  ? "Checking Activation Status..."
+                  : "Check Admin Activation Status"}
               </span>
             </button>
             <button

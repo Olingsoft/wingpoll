@@ -1,19 +1,20 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   AlertCircle,
-  ArrowRight,
   CheckCircle2,
+  Clock,
   Loader2,
   LogOut,
   MailCheck,
   RefreshCw,
   Send,
+  ShieldCheck,
 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
+import { StatusBadge } from "@/components/StatusBadge";
 import { useApp } from "@/context/AppContext";
 import { getFirebaseAuthErrorMessage } from "@/lib/firebase";
 
@@ -25,6 +26,7 @@ export default function VerifyEmailPage() {
     emailVerified,
     refreshEmailVerification,
     resendEmailVerification,
+    refreshUserProfile,
     logoutUser,
   } = useApp();
 
@@ -43,13 +45,28 @@ export default function VerifyEmailPage() {
     try {
       const isNowVerified = await refreshEmailVerification();
       if (isNowVerified) {
-        setStatusMessage({
-          type: "success",
-          text: "Email verified! Redirecting to your dashboard...",
-        });
-        setTimeout(() => {
-          router.push("/dashboard");
-        }, 900);
+        const updatedProfile = await refreshUserProfile();
+        if (updatedProfile?.role === "admin") {
+          router.push("/admin");
+          return;
+        }
+        if (updatedProfile?.status === "Active") {
+          setStatusMessage({
+            type: "success",
+            text: "Email verified and account is active! Redirecting to dashboard...",
+          });
+          setTimeout(() => {
+            router.push("/dashboard");
+          }, 800);
+        } else {
+          setStatusMessage({
+            type: "success",
+            text: "Step 1 Complete: Email verified! Now waiting for Admin to activate your account.",
+          });
+          setTimeout(() => {
+            router.push("/dashboard");
+          }, 1200);
+        }
       } else {
         setStatusMessage({
           type: "warning",
@@ -61,6 +78,30 @@ export default function VerifyEmailPage() {
         type: "error",
         text: getFirebaseAuthErrorMessage(error),
       });
+    } finally {
+      setCheckingStatus(false);
+    }
+  };
+
+  const handleCheckAdminActivation = async () => {
+    setStatusMessage(null);
+    setCheckingStatus(true);
+    try {
+      const updated = await refreshUserProfile();
+      if (updated?.status === "Active") {
+        setStatusMessage({
+          type: "success",
+          text: "Your account has been activated by Admin! Redirecting to dashboard...",
+        });
+        setTimeout(() => {
+          router.push("/dashboard");
+        }, 700);
+      } else {
+        setStatusMessage({
+          type: "warning",
+          text: "Your email is verified, and your account is currently awaiting Admin activation. Please check back shortly.",
+        });
+      }
     } finally {
       setCheckingStatus(false);
     }
@@ -95,127 +136,221 @@ export default function VerifyEmailPage() {
       <Navbar />
 
       <main className="flex-1 flex items-center justify-center py-12 px-4 sm:px-6">
-        <div className="max-w-md w-full bg-white border border-slate-200 rounded-lg p-6 sm:p-8 shadow-xs">
-          <div className="text-center mb-6">
-            <div className="w-14 h-14 rounded-full bg-[#F0FDF4] border border-emerald-200 flex items-center justify-center mx-auto mb-3 text-[#16A34A]">
-              <MailCheck className="w-7 h-7" />
-            </div>
-            <h1 className="text-xl font-bold text-slate-900">
-              Verify Your Email Address
-            </h1>
-            <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-              We sent a verification link to{" "}
-              <strong className="text-slate-800">{targetEmail}</strong>. Please
-              verify your email to secure your WingPoll account and M-Pesa
-              withdrawals.
-            </p>
-          </div>
-
-          {emailVerified && (
-            <div className="mb-5 p-4 rounded-md bg-[#F0FDF4] border border-emerald-200 flex items-center gap-3 text-xs text-[#14532D]">
-              <CheckCircle2 className="w-5 h-5 text-[#16A34A] shrink-0" />
-              <div>
-                <p className="font-semibold">Your email is verified!</p>
-                <p className="text-[11px] text-emerald-800 mt-0.5">
-                  You have full access to all microtasks and M-Pesa payouts.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {statusMessage && (
+        <div className="max-w-md w-full bg-white border border-slate-200 rounded-lg p-6 sm:p-8 shadow-xs space-y-5">
+          {/* 2-Step Onboarding Progress Indicator */}
+          <div className="grid grid-cols-2 gap-2 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">
             <div
-              className={`mb-5 p-3.5 rounded-md border flex items-start gap-2.5 text-xs ${
-                statusMessage.type === "success"
-                  ? "bg-[#F0FDF4] border-emerald-200 text-[#14532D]"
-                  : statusMessage.type === "warning"
-                  ? "bg-amber-50 border-amber-200 text-amber-900"
-                  : "bg-red-50 border-red-200 text-red-700"
+              className={`flex items-center gap-2 px-3 py-2 rounded-md font-semibold ${
+                emailVerified
+                  ? "bg-[#F0FDF4] text-[#14532D] border border-emerald-200"
+                  : "bg-[#16A34A] text-white"
               }`}
             >
-              {statusMessage.type === "success" ? (
-                <CheckCircle2 className="w-4 h-4 text-[#16A34A] shrink-0 mt-0.5" />
+              {emailVerified ? (
+                <CheckCircle2 className="w-4 h-4 text-[#16A34A] shrink-0" />
               ) : (
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span className="w-4 h-4 rounded-full bg-white text-[#14532D] text-[10px] font-bold flex items-center justify-center shrink-0">
+                  1
+                </span>
               )}
-              <span>{statusMessage.text}</span>
+              <span>1. Verify Email</span>
             </div>
+
+            <div
+              className={`flex items-center gap-2 px-3 py-2 rounded-md font-semibold ${
+                emailVerified && user.status === "Active"
+                  ? "bg-[#F0FDF4] text-[#14532D] border border-emerald-200"
+                  : emailVerified
+                  ? "bg-amber-50 text-amber-900 border border-amber-200"
+                  : "text-slate-400"
+              }`}
+            >
+              <span className="w-4 h-4 rounded-full bg-slate-200 text-slate-700 text-[10px] font-bold flex items-center justify-center shrink-0">
+                2
+              </span>
+              <span>2. Admin Activation</span>
+            </div>
+          </div>
+
+          {!emailVerified ? (
+            <>
+              <div className="text-center">
+                <div className="w-14 h-14 rounded-full bg-[#F0FDF4] border border-emerald-200 flex items-center justify-center mx-auto mb-3 text-[#16A34A]">
+                  <MailCheck className="w-7 h-7" />
+                </div>
+                <span className="inline-block px-2.5 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-200 mb-2">
+                  Step 1 of 2 • Email Verification Required
+                </span>
+                <h1 className="text-xl font-bold text-slate-900">
+                  Verify Your Email Address
+                </h1>
+                <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                  We sent a verification link to{" "}
+                  <strong className="text-slate-800">{targetEmail}</strong>.
+                  Please verify your email first — once verified, your account
+                  will proceed to Admin activation.
+                </p>
+              </div>
+
+              {statusMessage && (
+                <div
+                  className={`p-3.5 rounded-md border flex items-start gap-2.5 text-xs ${
+                    statusMessage.type === "success"
+                      ? "bg-[#F0FDF4] border-emerald-200 text-[#14532D]"
+                      : statusMessage.type === "warning"
+                      ? "bg-amber-50 border-amber-200 text-amber-900"
+                      : "bg-red-50 border-red-200 text-red-700"
+                  }`}
+                >
+                  {statusMessage.type === "success" ? (
+                    <CheckCircle2 className="w-4 h-4 text-[#16A34A] shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  )}
+                  <span>{statusMessage.text}</span>
+                </div>
+              )}
+
+              {/* Instructions Box */}
+              <div className="bg-slate-50 border border-slate-200 rounded-md p-4 space-y-2 text-xs text-slate-600">
+                <p className="font-semibold text-slate-800">
+                  How to complete Step 1:
+                </p>
+                <ol className="list-decimal list-inside space-y-1.5">
+                  <li>
+                    Open your email inbox for <strong>{targetEmail}</strong>.
+                  </li>
+                  <li>
+                    Click the verification link in the email from{" "}
+                    <strong>WingPoll</strong>.
+                  </li>
+                  <li>
+                    Click{" "}
+                    <strong>&ldquo;I&apos;ve Verified My Email&rdquo;</strong>{" "}
+                    below to proceed to Admin Account Activation.
+                  </li>
+                </ol>
+              </div>
+
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={handleCheckVerified}
+                  disabled={checkingStatus || resending}
+                  className="w-full py-2.5 px-4 bg-[#16A34A] hover:bg-[#15803d] text-white text-sm font-semibold rounded-md transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                >
+                  {checkingStatus ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Checking Email Verification...</span>
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4" />
+                      <span>I&apos;ve Verified My Email — Continue</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleResendEmail}
+                  disabled={resending || checkingStatus}
+                  className="w-full py-2.5 px-4 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold rounded-md transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                >
+                  {resending ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Sending Verification Link...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-3.5 h-3.5 text-[#16A34A]" />
+                      <span>Resend Verification Email</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </>
+          ) : (
+            /* Step 2: Email is Verified -> Now wait for Admin Account Activation */
+            <>
+              <div className="text-center">
+                <div className="w-14 h-14 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center mx-auto mb-3 text-amber-600">
+                  {user.status === "Active" ? (
+                    <ShieldCheck className="w-7 h-7 text-[#16A34A]" />
+                  ) : (
+                    <Clock className="w-7 h-7" />
+                  )}
+                </div>
+                <div className="flex justify-center gap-2 mb-2">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-bold bg-[#F0FDF4] text-[#14532D] border border-emerald-200">
+                    <CheckCircle2 className="w-3 h-3 text-[#16A34A]" />
+                    Email Verified
+                  </span>
+                  <StatusBadge status={user.status} />
+                </div>
+                <h1 className="text-xl font-bold text-slate-900">
+                  {user.status === "Active"
+                    ? "Account Activated!"
+                    : "Waiting for Admin Account Activation"}
+                </h1>
+                <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                  {user.status === "Active" ? (
+                    "Your email is verified and your account has been activated by Admin."
+                  ) : (
+                    <>
+                      Great job verifying{" "}
+                      <strong className="text-slate-800">{targetEmail}</strong>!
+                      Your account is now in the queue waiting for an
+                      administrator to activate it.
+                    </>
+                  )}
+                </p>
+              </div>
+
+              {statusMessage && (
+                <div
+                  className={`p-3.5 rounded-md border flex items-start gap-2.5 text-xs ${
+                    statusMessage.type === "success"
+                      ? "bg-[#F0FDF4] border-emerald-200 text-[#14532D]"
+                      : "bg-amber-50 border-amber-200 text-amber-900"
+                  }`}
+                >
+                  <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{statusMessage.text}</span>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={handleCheckAdminActivation}
+                disabled={checkingStatus}
+                className="w-full py-2.5 px-4 bg-[#16A34A] hover:bg-[#15803d] text-white text-sm font-semibold rounded-md transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+              >
+                {checkingStatus ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Checking Activation Status...</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4" />
+                    <span>Check Admin Activation Status</span>
+                  </>
+                )}
+              </button>
+            </>
           )}
 
-          {/* Instructions Box */}
-          <div className="mb-6 bg-slate-50 border border-slate-200 rounded-md p-4 space-y-2 text-xs text-slate-600">
-            <p className="font-semibold text-slate-800">Next Steps:</p>
-            <ol className="list-decimal list-inside space-y-1.5">
-              <li>
-                Open your email inbox for <strong>{targetEmail}</strong>.
-              </li>
-              <li>
-                Click the verification link in the email from{" "}
-                <strong>WingPoll (Firebase)</strong>.
-              </li>
-              <li>
-                Come back here and click{" "}
-                <strong>&ldquo;I&apos;ve Verified My Email&rdquo;</strong> below.
-              </li>
-            </ol>
-          </div>
-
-          <div className="space-y-3">
-            <button
-              type="button"
-              onClick={handleCheckVerified}
-              disabled={checkingStatus || resending}
-              className="w-full py-2.5 px-4 bg-[#16A34A] hover:bg-[#15803d] text-white text-sm font-semibold rounded-md transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-            >
-              {checkingStatus ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Checking Verification Status...</span>
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="w-4 h-4" />
-                  <span>I&apos;ve Verified My Email — Continue</span>
-                </>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleResendEmail}
-              disabled={resending || checkingStatus}
-              className="w-full py-2.5 px-4 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold rounded-md transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-            >
-              {resending ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Sending Verification Link...</span>
-                </>
-              ) : (
-                <>
-                  <Send className="w-3.5 h-3.5 text-[#16A34A]" />
-                  <span>Resend Verification Email</span>
-                </>
-              )}
-            </button>
-          </div>
-
-          <div className="mt-6 pt-5 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-1 font-semibold text-[#16A34A] hover:underline"
-            >
-              <span>Skip to Dashboard</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-
+          <div className="pt-4 border-t border-slate-100 flex items-center justify-center text-xs">
             <button
               type="button"
               onClick={handleSwitchAccount}
               className="inline-flex items-center gap-1.5 text-slate-500 hover:text-red-600 font-medium cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span>Use Different Email</span>
+              <span>Sign Out / Use Different Email</span>
             </button>
           </div>
         </div>

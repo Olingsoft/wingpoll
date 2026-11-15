@@ -182,6 +182,7 @@ export interface UserProfile {
   role?: UserRole;
   avatarInitials: string;
   photoURL?: string;
+  emailVerified?: boolean;
   authProvider?: "email" | "google" | "demo";
   availableBalance: number;
   totalEarnings: number;

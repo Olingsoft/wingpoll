@@ -1575,11 +1575,24 @@ export default function AdminDashboardPage() {
                             <span className="text-[11px] text-slate-400 block">
                               {u.email}
                             </span>
-                            {u.referredByCode && (
-                              <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-[10px] font-semibold text-[#14532D]">
-                                Referred by: {u.referredByCode}
+                            <div className="flex flex-wrap items-center gap-1 mt-1">
+                              <span
+                                className={`inline-block px-1.5 py-0.5 rounded border text-[10px] font-semibold ${
+                                  u.emailVerified || u.role === "admin"
+                                    ? "bg-[#F0FDF4] border-emerald-200 text-[#14532D]"
+                                    : "bg-amber-50 border-amber-200 text-amber-800"
+                                }`}
+                              >
+                                {u.emailVerified || u.role === "admin"
+                                  ? "Email Verified ✓"
+                                  : "Awaiting Email Verification"}
                               </span>
-                            )}
+                              {u.referredByCode && (
+                                <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-[10px] font-semibold text-[#14532D]">
+                                  Referred by: {u.referredByCode}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="py-3.5 px-4">
                             <span
@@ -1617,14 +1630,14 @@ export default function AdminDashboardPage() {
                                     await approveUserAccount(u.id);
                                     setUserApprovalToast(
                                       u.referredByCode
-                                        ? `Approved ${u.name}'s account & granted KSh 50 referral bonus to referrer (${u.referredByCode})!`
-                                        : `Approved ${u.name}'s earner account! They can now access tasks.`
+                                        ? `Activated ${u.name}'s account & granted KSh 50 referral bonus to referrer (${u.referredByCode})!`
+                                        : `Activated ${u.name}'s earner account! They can now access tasks.`
                                     );
                                   }}
                                   className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-[#16A34A] hover:bg-[#15803d] text-white rounded cursor-pointer shadow-2xs"
                                 >
                                   <CheckCircle2 className="w-3.5 h-3.5" />
-                                  <span>Approve Account</span>
+                                  <span>Activate Account</span>
                                 </button>
                                 {u.status !== "Rejected" && (
                                   <button

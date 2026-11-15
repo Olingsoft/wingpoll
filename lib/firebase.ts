@@ -136,6 +136,7 @@ export async function saveUserToFirestore(
     role,
     avatarInitials: initials || "WP",
     photoURL: fbUser.photoURL || existingData.photoURL || undefined,
+    emailVerified: Boolean(fbUser.emailVerified || existingData.emailVerified),
     authProvider:
       extra?.authProvider ||
       existingData.authProvider ||
@@ -838,6 +839,9 @@ export async function sendVerificationEmail(targetUser?: FirebaseUser | null) {
 export async function reloadFirebaseUser(): Promise<boolean> {
   if (!auth.currentUser) return false;
   await reload(auth.currentUser);
+  if (auth.currentUser.emailVerified) {
+    await updateUserInFirestore(auth.currentUser.uid, { emailVerified: true });
+  }
   return auth.currentUser.emailVerified;
 }
 
