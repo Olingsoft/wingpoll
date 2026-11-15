@@ -58,10 +58,12 @@ export default function LoginPage() {
       updateUserProfile(savedProfile);
       if (savedProfile.role === "admin") {
         router.push("/admin");
-      } else if (!fbUser.emailVerified && !savedProfile.emailVerified) {
+      } else if (!fbUser.emailVerified) {
         sendVerificationEmail(fbUser).catch(() => {
           // Ignore if a verification email was already sent very recently
         });
+        router.push("/verify-email");
+      } else if (savedProfile.status !== "Active") {
         router.push("/verify-email");
       } else {
         router.push("/dashboard");
@@ -84,10 +86,12 @@ export default function LoginPage() {
       updateUserProfile(savedProfile);
       if (savedProfile.role === "admin") {
         router.push("/admin");
-      } else if (!fbUser.emailVerified && !savedProfile.emailVerified) {
+      } else if (!fbUser.emailVerified) {
         sendVerificationEmail(fbUser).catch(() => {
           // Ignore if a verification email was already sent very recently
         });
+        router.push("/verify-email");
+      } else if (savedProfile.status !== "Active") {
         router.push("/verify-email");
       } else {
         router.push("/dashboard");

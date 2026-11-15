@@ -7,12 +7,10 @@ import {
   AlertCircle,
   CheckCircle2,
   Clock,
-  KeyRound,
   Loader2,
   LogOut,
   MailCheck,
   RefreshCw,
-  Send,
   ShieldAlert,
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
@@ -20,7 +18,6 @@ import { DashboardHeader } from "@/components/DashboardHeader";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useApp } from "@/context/AppContext";
-import { getFirebaseAuthErrorMessage } from "@/lib/firebase";
 
 export default function DashboardLayout({
   children,
@@ -37,67 +34,22 @@ export default function DashboardLayout({
     logoutUser,
     resendEmailVerification,
     refreshEmailVerification,
-    verifyEmailWithCode,
     refreshUserProfile,
   } = useApp();
   const [bannerNotice, setBannerNotice] = useState<string | null>(null);
   const [isCheckingApproval, setIsCheckingApproval] = useState(false);
-  const [manualCodeOrLink, setManualCodeOrLink] = useState("");
-  const [verifyingCode, setVerifyingCode] = useState(false);
 
-  // Redirect unverified non-admin users strictly to /verify-email until their email is verified
+  // Redirect unauthenticated users to /login, and unverified non-admin users strictly to /verify-email
   useEffect(() => {
-    if (!authLoading && firebaseUser && user.role !== "admin" && !emailVerified) {
+    if (authLoading) return;
+    if (!firebaseUser) {
+      router.replace("/login");
+      return;
+    }
+    if (user.role !== "admin" && !emailVerified) {
       router.replace("/verify-email");
     }
   }, [authLoading, firebaseUser, user.role, emailVerified, router]);
-
-  // Auto-poll email verification status while on Step 1 gate
-  useEffect(() => {
-    if (!firebaseUser || emailVerified || user.role === "admin") return;
-
-    const checkSilently = async () => {
-      try {
-        const verified = await refreshEmailVerification();
-        if (verified) {
-          await refreshUserProfile();
-          setBannerNotice("Step 1 Complete: Email verified!");
-        }
-      } catch {
-        // Ignore poll errors
-      }
-    };
-
-    const interval = setInterval(checkSilently, 5000);
-    window.addEventListener("focus", checkSilently);
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener("focus", checkSilently);
-    };
-  }, [
-    firebaseUser,
-    emailVerified,
-    user.role,
-    refreshEmailVerification,
-    refreshUserProfile,
-  ]);
-
-  const handleVerifyCodeOrLink = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!manualCodeOrLink.trim()) return;
-    setBannerNotice(null);
-    setVerifyingCode(true);
-    try {
-      await verifyEmailWithCode(manualCodeOrLink);
-      await refreshUserProfile();
-      setManualCodeOrLink("");
-      setBannerNotice("Step 1 Complete: Email verified!");
-    } catch (error) {
-      setBannerNotice(getFirebaseAuthErrorMessage(error));
-    } finally {
-      setVerifyingCode(false);
-    }
-  };
 
   const handleQuickResend = async () => {
     try {
@@ -134,127 +86,28 @@ export default function DashboardLayout({
     }
   };
 
-  if (authLoading) {
+  if (authLoading || !firebaseUser) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
         <div className="bg-white border border-slate-200 rounded-lg p-8 max-w-sm w-full text-center space-y-3 shadow-xs">
           <Loader2 className="w-7 h-7 text-[#16A34A] animate-spin mx-auto" />
           <p className="text-sm font-semibold text-slate-800">
-            Loading Your Account...
+            {authLoading ? "Loading Your Account..." : "Redirecting to Login..."}
           </p>
         </div>
       </div>
     );
   }
 
-  // Step 1 Gate: Non-admin users MUST verify their email address first
-  if (firebaseUser && user.role !== "admin" && !emailVerified) {
+  // Step 1 Gate: Non-admin users MUST verify their email address on /verify-email first (never stay on /dashboard)
+  if (user.role !== "admin" && !emailVerified) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
-        <div className="bg-white border border-slate-200 rounded-lg p-6 sm:p-8 max-w-lg w-full space-y-5 shadow-xs">
-          {/* 2-Step Onboarding Progress Indicator */}
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="flex items-center gap-2 px-3 py-2 rounded-md border font-semibold bg-amber-50 border-amber-300 text-amber-900">
-              <span className="w-5 h-5 rounded-full bg-amber-500 text-white text-[11px] font-bold flex items-center justify-center shrink-0">
-                1
-              </span>
-              <span>1. Verify Email</span>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-2 rounded-md border font-semibold bg-slate-50 border-slate-200 text-slate-400">
-              <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-600 text-[11px] font-bold flex items-center justify-center shrink-0">
-                2
-              </span>
-              <span>2. Admin Activation</span>
-            </div>
-          </div>
-
-          <div className="text-center space-y-2">
-            <div className="w-14 h-14 rounded-full bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto">
-              <MailCheck className="w-7 h-7" />
-            </div>
-            <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
-              Step 1 of 2: Email Verification Required
-            </span>
-            <h1 className="text-lg sm:text-xl font-bold text-slate-900">
-              Verify Your Email Address
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              We sent a verification link to{" "}
-              <strong className="text-slate-900">
-                {firebaseUser.email || user.email}
-              </strong>
-              . Please click the link in your inbox (or spam folder) to verify
-              your email before proceeding to admin account activation.
-            </p>
-          </div>
-
-          {bannerNotice && (
-            <div className="p-3 rounded-md bg-[#F0FDF4] border border-emerald-200 text-xs font-semibold text-[#14532D] text-center">
-              {bannerNotice}
-            </div>
-          )}
-
-          {/* Optional Paste Verification Code or Link from Email */}
-          <form
-            onSubmit={handleVerifyCodeOrLink}
-            className="bg-slate-50 border border-slate-200 rounded-md p-3.5 space-y-2"
-          >
-            <label className="block text-xs font-semibold text-slate-700">
-              Paste Verification Code or Link from Email (Optional)
-            </label>
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <KeyRound className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={manualCodeOrLink}
-                  onChange={(e) => setManualCodeOrLink(e.target.value)}
-                  placeholder="Paste verification code or link..."
-                  className="w-full pl-8 pr-3 py-2 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:border-[#16A34A]"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={verifyingCode || !manualCodeOrLink.trim()}
-                className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-md cursor-pointer disabled:opacity-50 shrink-0"
-              >
-                {verifyingCode ? "Verifying..." : "Verify Code"}
-              </button>
-            </div>
-          </form>
-
-          <div className="space-y-2.5 pt-1">
-            <button
-              type="button"
-              onClick={handleQuickRefresh}
-              className="w-full py-2.5 px-4 bg-[#16A34A] hover:bg-[#15803d] text-white text-xs font-semibold rounded-md flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>I&apos;ve Verified My Email — Continue</span>
-            </button>
-
-            <div className="flex flex-col sm:flex-row items-center gap-2.5">
-              <button
-                type="button"
-                onClick={handleQuickResend}
-                className="w-full sm:flex-1 py-2.5 px-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-md flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <Send className="w-3.5 h-3.5" />
-                <span>Resend Verification Email</span>
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  await logoutUser();
-                  router.push("/login");
-                }}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md cursor-pointer"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>Sign Out</span>
-              </button>
-            </div>
-          </div>
+        <div className="bg-white border border-slate-200 rounded-lg p-8 max-w-sm w-full text-center space-y-3 shadow-xs">
+          <Loader2 className="w-7 h-7 text-[#16A34A] animate-spin mx-auto" />
+          <p className="text-sm font-semibold text-slate-800">
+            Redirecting to Email Verification...
+          </p>
         </div>
       </div>
     );

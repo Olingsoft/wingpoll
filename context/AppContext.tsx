@@ -165,9 +165,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (fbUser) {
         const savedProfile = await saveUserToFirestore(fbUser);
         setUser(savedProfile);
-        setEmailVerified(
-          Boolean(fbUser.emailVerified || savedProfile.emailVerified)
-        );
+        setEmailVerified(Boolean(fbUser.emailVerified));
 
         const [latestUsers, latestReferrals] = await Promise.all([
           fetchAllUsersFromFirestore(),
@@ -212,15 +210,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const refreshEmailVerification = async (): Promise<boolean> => {
     const verified = await reloadFirebaseUser();
-    const isNowVerified = Boolean(verified || user.emailVerified);
-    setEmailVerified(isNowVerified);
+    setEmailVerified(verified);
     if (auth.currentUser) {
       setFirebaseUser(auth.currentUser);
     }
-    if (isNowVerified) {
+    if (verified) {
       setUser((prev) => ({ ...prev, emailVerified: true }));
     }
-    return isNowVerified;
+    return verified;
   };
 
   const resendEmailVerification = async (): Promise<void> => {

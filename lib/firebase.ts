@@ -142,7 +142,7 @@ export async function saveUserToFirestore(
     role,
     avatarInitials: initials || "WP",
     photoURL: fbUser.photoURL || existingData.photoURL || undefined,
-    emailVerified: Boolean(fbUser.emailVerified || existingData.emailVerified),
+    emailVerified: Boolean(fbUser.emailVerified),
     authProvider:
       extra?.authProvider ||
       existingData.authProvider ||
@@ -789,9 +789,8 @@ export async function grantReferralRewardInFirestore(
 
 /**
  * Send or Resend Email Verification Link to the current Firebase user.
- * Configures continueUrl to redirect back to https://wingpoll.co.ke/verify-email?verified=true,
- * and falls back to default Firebase sendEmailVerification if wingpoll.co.ke is not yet in
- * Firebase Console -> Authentication -> Settings -> Authorized domains.
+ * Uses Firebase's native sendEmailVerification directly so it works reliably across all domains
+ * without throwing auth/unauthorized-domain.
  */
 export async function sendVerificationEmail(targetUser?: FirebaseUser | null) {
   const userToVerify = targetUser ?? auth.currentUser;
@@ -799,31 +798,7 @@ export async function sendVerificationEmail(targetUser?: FirebaseUser | null) {
     throw new Error("No signed-in user found to verify.");
   }
 
-  const origin =
-    typeof window !== "undefined" &&
-    window.location.origin &&
-    !window.location.origin.includes("localhost")
-      ? window.location.origin
-      : WINGPOLL_DOMAIN;
-
-  const continueUrl = `${origin}/verify-email?verified=true`;
-
-  try {
-    await sendEmailVerification(userToVerify, {
-      url: continueUrl,
-      handleCodeInApp: false,
-    });
-  } catch (err: unknown) {
-    const code =
-      typeof err === "object" && err !== null && "code" in err
-        ? String((err as { code: unknown }).code)
-        : "";
-    if (code === "auth/too-many-requests") {
-      throw err;
-    }
-    // Fallback to default Firebase verification email if custom continueUrl domain is not yet authorized in Firebase Console
-    await sendEmailVerification(userToVerify);
-  }
+  await sendEmailVerification(userToVerify);
 }
 
 /**
@@ -883,12 +858,8 @@ export async function registerWithEmail(
     });
   }
 
-  // Immediately dispatch verification email so it is never delayed by Firestore calls
-  try {
-    await sendVerificationEmail(credential.user);
-  } catch (verifyErr) {
-    console.warn("Initial verification email dispatch warning:", verifyErr);
-  }
+  // Immediately dispatch verification email to the user's email address
+  await sendVerificationEmail(credential.user);
 
   // Save normal user to Firestore `users` collection with role="user" (status="Pending Approval")
   const newUserProfile = await saveUserToFirestore(credential.user, {

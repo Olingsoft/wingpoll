@@ -107,6 +107,7 @@ export default function RegisterPage() {
         phone: data.phone,
         mpesaNumber: data.phone,
         role: "user",
+        emailVerified: false,
         status: "Pending Approval",
         referredByCode: data.referralCode?.trim().toUpperCase() || undefined,
         authProvider: "email",
@@ -130,7 +131,7 @@ export default function RegisterPage() {
       await refreshUserProfile();
       setRegisteredSuccess(true);
       setTimeout(() => {
-        router.push("/dashboard");
+        router.push("/verify-email");
       }, 700);
     } catch (error) {
       setAuthError(getFirebaseAuthErrorMessage(error));
@@ -163,7 +164,7 @@ export default function RegisterPage() {
             <div className="mb-5 p-3.5 rounded-md bg-[#F0FDF4] border border-emerald-200 flex items-center gap-2.5 text-xs text-[#14532D] font-medium">
               <CheckCircle2 className="w-4 h-4 text-[#16A34A] shrink-0" />
               <span>
-                Account created! Verification email sent — redirecting...
+                Account created! Redirecting to verification...
               </span>
             </div>
           )}

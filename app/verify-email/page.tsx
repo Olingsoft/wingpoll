@@ -43,32 +43,34 @@ export default function VerifyEmailPage() {
 
   const targetEmail = firebaseUser?.email || user.email;
 
-  // Once emailVerified becomes true, redirect to /dashboard (where the Waiting for Admin Approval page is shown)
+  // Only redirect to /dashboard once BOTH email is verified AND Admin has activated the account
   useEffect(() => {
     if (!firebaseUser || !emailVerified) return;
     if (user.role === "admin") {
       router.replace("/admin");
-    } else {
+    } else if (user.status === "Active") {
       router.replace("/dashboard");
     }
-  }, [firebaseUser, emailVerified, user.role, router]);
-  // Automatically process ?oobCode=... or ?verified=true when user returns from email link on wingpoll.co.ke
+  }, [firebaseUser, emailVerified, user.role, user.status, router]);
+
+  // Automatically process ?oobCode=... if the user clicked a direct verification link
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const oobCode = params.get("oobCode");
-    const verifiedFlag = params.get("verified");
 
     if (oobCode) {
       setCheckingStatus(true);
       verifyEmailWithCode(oobCode)
         .then(async () => {
-          await refreshUserProfile();
+          const updated = await refreshUserProfile();
           setStatusMessage({
             type: "success",
-            text: "Email verified! Redirecting to Admin Approval page...",
+            text: "Step 1 Complete: Email verified! Now waiting for Admin to activate your account.",
           });
-          router.replace("/dashboard");
+          if (updated?.status === "Active") {
+            router.replace("/dashboard");
+          }
         })
         .catch((err) => {
           setStatusMessage({
@@ -79,46 +81,8 @@ export default function VerifyEmailPage() {
         .finally(() => {
           setCheckingStatus(false);
         });
-    } else if (verifiedFlag === "true") {
-      refreshEmailVerification().then(async (verified) => {
-        if (verified) {
-          await refreshUserProfile();
-          setStatusMessage({
-            type: "success",
-            text: "Email verified! Redirecting to Admin Approval page...",
-          });
-          router.replace("/dashboard");
-        }
-      });
     }
-  }, [verifyEmailWithCode, refreshEmailVerification, refreshUserProfile, router]);
-
-  // Auto-poll verification status every 5s and on window focus while unverified
-  useEffect(() => {
-    if (!firebaseUser || emailVerified) return;
-
-    const checkSilently = async () => {
-      try {
-        const isNowVerified = await refreshEmailVerification();
-        if (isNowVerified) {
-          await refreshUserProfile();
-          setStatusMessage({
-            type: "success",
-            text: "Step 1 Complete: Email verified! Now waiting for Admin to activate your account.",
-          });
-        }
-      } catch {
-        // Ignore background poll errors
-      }
-    };
-
-    const interval = setInterval(checkSilently, 5000);
-    window.addEventListener("focus", checkSilently);
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener("focus", checkSilently);
-    };
-  }, [firebaseUser, emailVerified, refreshEmailVerification, refreshUserProfile]);
+  }, [verifyEmailWithCode, refreshUserProfile, router]);
 
   const handleVerifyCodeOrLink = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,12 +91,15 @@ export default function VerifyEmailPage() {
     setVerifyingCode(true);
     try {
       await verifyEmailWithCode(manualCodeOrLink);
-      await refreshUserProfile();
+      const updated = await refreshUserProfile();
       setManualCodeOrLink("");
       setStatusMessage({
         type: "success",
-        text: "Step 1 Complete: Email verified via code/link! Now waiting for Admin to activate your account.",
+        text: "Step 1 Complete: Email verified! Now waiting for Admin to activate your account.",
       });
+      if (updated?.status === "Active") {
+        router.push("/dashboard");
+      }
     } catch (error) {
       setStatusMessage({
         type: "error",
@@ -167,14 +134,11 @@ export default function VerifyEmailPage() {
             type: "success",
             text: "Step 1 Complete: Email verified! Now waiting for Admin to activate your account.",
           });
-          setTimeout(() => {
-            router.push("/dashboard");
-          }, 1200);
         }
       } else {
         setStatusMessage({
           type: "warning",
-          text: "Your email is not verified yet. Please click the verification link in your inbox (or spam folder) and try again.",
+          text: "Your email is not verified yet. Please open your email inbox (or Spam folder), click the verification link we sent you, and try again.",
         });
       }
     } catch (error) {
