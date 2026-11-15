@@ -11,6 +11,7 @@ import {
   Transaction,
   UserAccountStatus,
   UserProfile,
+  UserRole,
   Withdrawal,
   WithdrawalStatus,
 } from "@/lib/types";
@@ -113,6 +114,7 @@ interface AppContextType {
     userId: string,
     status: UserAccountStatus
   ) => Promise<void>;
+  updateUserRole: (userId: string, role: UserRole) => Promise<void>;
   grantReferralBonusManual: (referralId: string) => Promise<void>;
 }
 
@@ -994,6 +996,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     updateUserAccountStatus(userId, nextStatus);
   };
 
+  const updateUserRole = async (userId: string, nextRole: UserRole) => {
+    const targetUser = allUsers.find((u) => u.id === userId);
+    const nextStatus: UserAccountStatus =
+      nextRole !== "user" ? "Active" : targetUser?.status || "Active";
+
+    setAllUsers((prev) =>
+      prev.map((u) =>
+        u.id === userId ? { ...u, role: nextRole, status: nextStatus } : u
+      )
+    );
+    if (user.id === userId) {
+      setUser((prev) => ({ ...prev, role: nextRole, status: nextStatus }));
+    }
+
+    await updateUserInFirestore(userId, { role: nextRole, status: nextStatus });
+
+    const roleLabel =
+      nextRole === "admin"
+        ? "Super Admin"
+        : nextRole === "agent-admin"
+        ? "Agent Admin"
+        : "User";
+
+    const notif: NotificationItem = {
+      id: `notif-role-${Date.now()}`,
+      userId,
+      title: `Account Role Updated: ${roleLabel}`,
+      message:
+        nextRole === "agent-admin"
+          ? `Congratulations ${targetUser?.name || ""}! You have been promoted to Agent Admin. You can now create tasks and manage task submissions.`
+          : `Your WingPoll account role has been updated to ${roleLabel} by Super Admin.`,
+      time: formatNowTimestamp(),
+      read: false,
+      type: "system",
+    };
+    setNotifications((prev) => [notif, ...prev]);
+    saveNotificationToFirestore(notif);
+  };
+
   const grantReferralBonusManual = async (referralId: string) => {
     const refRecord = referrals.find((r) => r.id === referralId);
     if (!refRecord || refRecord.rewardEarned > 0) return;
@@ -1104,6 +1145,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         toggleUserStatus,
         approveUserAccount,
         updateUserAccountStatus,
+        updateUserRole,
         grantReferralBonusManual,
       }}
     >

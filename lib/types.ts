@@ -165,7 +165,7 @@ export interface Advertisement {
   badgeText?: string;
 }
 
-export type UserRole = "user" | "admin";
+export type UserRole = "user" | "agent-admin" | "admin";
 
 export type UserAccountStatus =
   | "Pending Approval"

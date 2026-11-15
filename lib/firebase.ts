@@ -131,7 +131,9 @@ export async function saveUserToFirestore(
 
   const role: UserRole = extra?.role || existingData.role || "user";
   const defaultStatus =
-    role === "admin" ? "Active" : ("Pending Approval" as const);
+    role === "admin" || role === "agent-admin"
+      ? "Active"
+      : ("Pending Approval" as const);
 
   const userProfile: UserProfile = {
     id: fbUser.uid,

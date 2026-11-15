@@ -58,6 +58,8 @@ export default function LoginPage() {
       updateUserProfile(savedProfile);
       if (savedProfile.role === "admin") {
         router.push("/admin");
+      } else if (savedProfile.role === "agent-admin") {
+        router.push("/agent-admin");
       } else if (!fbUser.emailVerified) {
         sendVerificationEmail(fbUser).catch(() => {
           // Ignore if a verification email was already sent very recently
@@ -84,6 +86,8 @@ export default function LoginPage() {
       updateUserProfile(savedProfile);
       if (savedProfile.role === "admin") {
         router.push("/admin");
+      } else if (savedProfile.role === "agent-admin") {
+        router.push("/agent-admin");
       } else if (!fbUser.emailVerified) {
         sendVerificationEmail(fbUser).catch(() => {
           // Ignore if a verification email was already sent very recently

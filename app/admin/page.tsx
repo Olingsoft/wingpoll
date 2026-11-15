@@ -107,6 +107,7 @@ export default function AdminDashboardPage() {
     toggleUserStatus,
     approveUserAccount,
     updateUserAccountStatus,
+    updateUserRole,
     grantReferralBonusManual,
   } = useApp();
 
@@ -504,6 +505,14 @@ export default function AdminDashboardPage() {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            {user.role === "agent-admin" && (
+              <Link
+                href="/agent-admin"
+                className="w-full sm:w-auto px-5 py-2.5 text-xs font-semibold text-white bg-[#14532D] hover:bg-[#16A34A] rounded-md transition-colors"
+              >
+                Go to Agent Admin Console
+              </Link>
+            )}
             <Link
               href="/dashboard"
               className="w-full sm:w-auto px-5 py-2.5 text-xs font-semibold text-white bg-[#16A34A] hover:bg-[#15803d] rounded-md transition-colors"
@@ -1599,10 +1608,16 @@ export default function AdminDashboardPage() {
                               className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
                                 u.role === "admin"
                                   ? "bg-[#14532D] text-white"
+                                  : u.role === "agent-admin"
+                                  ? "bg-emerald-100 text-[#14532D] border border-emerald-300"
                                   : "bg-slate-100 text-slate-700"
                               }`}
                             >
-                              {u.role === "admin" ? "Admin" : "User"}
+                              {u.role === "admin"
+                                ? "Super Admin"
+                                : u.role === "agent-admin"
+                                ? "Agent Admin"
+                                : "User"}
                             </span>
                           </td>
                           <td className="py-3.5 px-4 font-mono text-slate-700">
@@ -1621,45 +1636,76 @@ export default function AdminDashboardPage() {
                             <StatusBadge status={u.status} />
                           </td>
                           <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                            {u.status === "Pending Approval" ||
-                            u.status === "Rejected" ? (
-                              <div className="inline-flex items-center gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    await approveUserAccount(u.id);
-                                    setUserApprovalToast(
-                                      u.referredByCode
-                                        ? `Activated ${u.name}'s account & granted KSh 50 referral bonus to referrer (${u.referredByCode})!`
-                                        : `Activated ${u.name}'s earner account! They can now access tasks.`
-                                    );
-                                  }}
-                                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-[#16A34A] hover:bg-[#15803d] text-white rounded cursor-pointer shadow-2xs"
-                                >
-                                  <CheckCircle2 className="w-3.5 h-3.5" />
-                                  <span>Activate Account</span>
-                                </button>
-                                {u.status !== "Rejected" && (
+                            <div className="inline-flex items-center justify-end gap-1.5 flex-wrap">
+                              {u.role !== "admin" &&
+                                (u.role === "agent-admin" ? (
                                   <button
                                     type="button"
-                                    onClick={() =>
-                                      updateUserAccountStatus(u.id, "Rejected")
-                                    }
-                                    className="px-2.5 py-1.5 text-xs font-semibold bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 rounded cursor-pointer"
+                                    onClick={async () => {
+                                      await updateUserRole(u.id, "user");
+                                      setUserApprovalToast(
+                                        `${u.name} has been demoted from Agent Admin to User.`
+                                      );
+                                    }}
+                                    className="px-2.5 py-1.5 text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 rounded cursor-pointer"
                                   >
-                                    Reject
+                                    Demote to User
                                   </button>
-                                )}
-                              </div>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => toggleUserStatus(u.id)}
-                                className="px-2.5 py-1 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded cursor-pointer"
-                              >
-                                {u.status === "Active" ? "Suspend" : "Activate"}
-                              </button>
-                            )}
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      await updateUserRole(u.id, "agent-admin");
+                                      setUserApprovalToast(
+                                        `${u.name} has been promoted to Agent Admin and can now create tasks & manage submissions.`
+                                      );
+                                    }}
+                                    className="px-2.5 py-1.5 text-xs font-semibold bg-[#F0FDF4] text-[#14532D] border border-emerald-200 hover:bg-emerald-100 rounded cursor-pointer"
+                                  >
+                                    Promote to Agent Admin
+                                  </button>
+                                ))}
+
+                              {u.status === "Pending Approval" ||
+                              u.status === "Rejected" ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      await approveUserAccount(u.id);
+                                      setUserApprovalToast(
+                                        u.referredByCode
+                                          ? `Activated ${u.name}'s account & granted KSh 50 referral bonus to referrer (${u.referredByCode})!`
+                                          : `Activated ${u.name}'s earner account! They can now access tasks.`
+                                      );
+                                    }}
+                                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-[#16A34A] hover:bg-[#15803d] text-white rounded cursor-pointer shadow-2xs"
+                                  >
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                    <span>Activate Account</span>
+                                  </button>
+                                  {u.status !== "Rejected" && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        updateUserAccountStatus(u.id, "Rejected")
+                                      }
+                                      className="px-2.5 py-1.5 text-xs font-semibold bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 rounded cursor-pointer"
+                                    >
+                                      Reject
+                                    </button>
+                                  )}
+                                </>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleUserStatus(u.id)}
+                                  className="px-2.5 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded cursor-pointer"
+                                >
+                                  {u.status === "Active" ? "Suspend" : "Activate"}
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))}

@@ -39,6 +39,9 @@ export default function DashboardLayout({
   const [bannerNotice, setBannerNotice] = useState<string | null>(null);
   const [isCheckingApproval, setIsCheckingApproval] = useState(false);
 
+  const isPrivilegedRole =
+    user.role === "admin" || user.role === "agent-admin";
+
   // Redirect unauthenticated users to /login, and unverified non-admin users strictly to /verify-email
   useEffect(() => {
     if (authLoading) return;
@@ -46,10 +49,10 @@ export default function DashboardLayout({
       router.replace("/login");
       return;
     }
-    if (user.role !== "admin" && !emailVerified) {
+    if (!isPrivilegedRole && !emailVerified) {
       router.replace("/verify-email");
     }
-  }, [authLoading, firebaseUser, user.role, emailVerified, router]);
+  }, [authLoading, firebaseUser, isPrivilegedRole, emailVerified, router]);
 
   const handleQuickResend = async () => {
     try {
@@ -100,7 +103,7 @@ export default function DashboardLayout({
   }
 
   // Step 1 Gate: Non-admin users MUST verify their email address on /verify-email first (never stay on /dashboard)
-  if (user.role !== "admin" && !emailVerified) {
+  if (!isPrivilegedRole && !emailVerified) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
         <div className="bg-white border border-slate-200 rounded-lg p-8 max-w-sm w-full text-center space-y-3 shadow-xs">
@@ -114,7 +117,7 @@ export default function DashboardLayout({
   }
 
   const isPendingApproval =
-    firebaseUser && user.role !== "admin" && user.status !== "Active";
+    firebaseUser && !isPrivilegedRole && user.status !== "Active";
   const isPending = user.status === "Pending Approval";
 
   return (

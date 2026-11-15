@@ -63,8 +63,15 @@ function AdminSubmissionReviewContent() {
     );
   }
 
-  // 2. Check if logged in and role === "admin"
-  if (!firebaseUser || user.role !== "admin") {
+  const canReviewSubmissions =
+    user.role === "admin" || user.role === "agent-admin";
+  const submissionsBackHref =
+    user.role === "agent-admin"
+      ? "/agent-admin?tab=submissions"
+      : "/admin?tab=submissions";
+
+  // 2. Check if logged in and role is admin or agent-admin
+  if (!firebaseUser || !canReviewSubmissions) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
         <div className="bg-white border border-slate-200 rounded-lg p-8 max-w-md w-full text-center space-y-4 shadow-xs">
@@ -93,7 +100,7 @@ function AdminSubmissionReviewContent() {
       <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
         <header className="h-16 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between">
           <Link
-            href="/admin?tab=submissions"
+            href={submissionsBackHref}
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-[#16A34A]"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -109,7 +116,7 @@ function AdminSubmissionReviewContent() {
               This submission may have been cancelled by the earner or removed.
             </p>
             <Link
-              href="/admin?tab=submissions"
+              href={submissionsBackHref}
               className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#16A34A] rounded-md hover:bg-[#15803d]"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
@@ -163,7 +170,7 @@ function AdminSubmissionReviewContent() {
       <header className="sticky top-0 z-30 h-16 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Link
-            href="/admin?tab=submissions"
+            href={submissionsBackHref}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
@@ -213,7 +220,7 @@ function AdminSubmissionReviewContent() {
 
             <button
               type="button"
-              onClick={() => router.push("/admin?tab=submissions")}
+              onClick={() => router.push(submissionsBackHref)}
               className="px-4 py-2 text-xs font-semibold bg-slate-900 text-white rounded-md hover:bg-slate-800 shrink-0 cursor-pointer"
             >
               Back to All Submissions →
