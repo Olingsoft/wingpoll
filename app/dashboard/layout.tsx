@@ -113,151 +113,9 @@ export default function DashboardLayout({
     );
   }
 
-  // Step 2 Gate: After email is verified, gate non-admin users whose account is Pending Approval, Suspended, or Rejected
-  if (
-    firebaseUser &&
-    user.role !== "admin" &&
-    user.status !== "Active"
-  ) {
-    const isPending = user.status === "Pending Approval";
-    return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
-        <div className="bg-white border border-slate-200 rounded-lg p-6 sm:p-8 max-w-lg w-full space-y-5 shadow-xs">
-          {/* 2-Step Onboarding Progress Indicator */}
-          {isPending && (
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="flex items-center gap-2 px-3 py-2 rounded-md border font-semibold bg-[#F0FDF4] border-emerald-300 text-[#14532D]">
-                <CheckCircle2 className="w-4 h-4 text-[#16A34A] shrink-0" />
-                <span>1. Email Verified ✓</span>
-              </div>
-              <div className="flex items-center gap-2 px-3 py-2 rounded-md border font-semibold bg-amber-50 border-amber-300 text-amber-900">
-                <span className="w-5 h-5 rounded-full bg-amber-500 text-white text-[11px] font-bold flex items-center justify-center shrink-0">
-                  2
-                </span>
-                <span>2. Admin Activation</span>
-              </div>
-            </div>
-          )}
-
-          <div className="text-center space-y-2">
-            <div
-              className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto border ${
-                isPending
-                  ? "bg-amber-50 border-amber-200 text-amber-600"
-                  : "bg-red-50 border-red-200 text-red-600"
-              }`}
-            >
-              {isPending ? (
-                <Clock className="w-7 h-7" />
-              ) : (
-                <ShieldAlert className="w-7 h-7" />
-              )}
-            </div>
-            <div className="flex justify-center pt-1">
-              <StatusBadge status={user.status} size="md" />
-            </div>
-            <h1 className="text-lg sm:text-xl font-bold text-slate-900">
-              {isPending
-                ? "Step 2 of 2: Waiting for Admin Account Activation"
-                : `Account ${user.status}`}
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              {isPending ? (
-                <>
-                  Hello <strong>{user.name}</strong>! Your email is verified.
-                  Your WingPoll earner account is now waiting for an
-                  administrator to activate your account before you can access
-                  the dashboard and start earning.
-                </>
-              ) : (
-                <>
-                  Your account (<strong>{user.email}</strong>) is currently{" "}
-                  <strong>{user.status}</strong>. Please contact WingPoll
-                  support for assistance.
-                </>
-              )}
-            </p>
-          </div>
-
-          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2 text-xs">
-            <div className="flex justify-between">
-              <span className="text-slate-500">Full Name:</span>
-              <span className="font-semibold text-slate-900">{user.name}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">Email Address:</span>
-              <span className="font-semibold text-slate-900">{user.email}</span>
-            </div>
-            {user.phone && (
-              <div className="flex justify-between">
-                <span className="text-slate-500">M-Pesa Phone:</span>
-                <span className="font-mono font-semibold text-slate-900">
-                  {user.phone}
-                </span>
-              </div>
-            )}
-            {user.referredByCode && (
-              <div className="flex justify-between">
-                <span className="text-slate-500">Referred By Code:</span>
-                <span className="font-mono font-bold text-[#14532D]">
-                  {user.referredByCode}
-                </span>
-              </div>
-            )}
-            <div className="flex justify-between">
-              <span className="text-slate-500">Step 1 (Email Verification):</span>
-              <span className="font-semibold text-[#16A34A]">
-                Verified ✓
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">Step 2 (Admin Activation):</span>
-              <span className="font-semibold text-amber-700">
-                {user.status}
-              </span>
-            </div>
-          </div>
-
-          {bannerNotice && (
-            <div className="p-3 rounded-md bg-[#F0FDF4] border border-emerald-200 text-xs font-semibold text-[#14532D] text-center">
-              {bannerNotice}
-            </div>
-          )}
-
-          <div className="flex flex-col sm:flex-row items-center gap-2.5 pt-1">
-            <button
-              type="button"
-              onClick={handleCheckApprovalStatus}
-              disabled={isCheckingApproval}
-              className="w-full sm:flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold text-white bg-[#16A34A] hover:bg-[#15803d] rounded-md cursor-pointer disabled:opacity-60"
-            >
-              <RefreshCw
-                className={`w-3.5 h-3.5 ${
-                  isCheckingApproval ? "animate-spin" : ""
-                }`}
-              />
-              <span>
-                {isCheckingApproval
-                  ? "Checking Activation Status..."
-                  : "Check Admin Activation Status"}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={async () => {
-                await logoutUser();
-                router.push("/login");
-              }}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md cursor-pointer"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>Sign Out</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const isPendingApproval =
+    firebaseUser && user.role !== "admin" && user.status !== "Active";
+  const isPending = user.status === "Pending Approval";
 
   return (
     <div className="min-h-screen flex bg-[#F8FAFC]">
@@ -276,6 +134,55 @@ export default function DashboardLayout({
         <DashboardHeader
           onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
         />
+
+        {/* Top Approval Banner when email is verified but account is still waiting for Admin approval */}
+        {isPendingApproval && (
+          <div className="bg-amber-50 border-b border-amber-200 px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3 text-xs text-amber-900">
+            <div className="flex items-center gap-2.5">
+              {isPending ? (
+                <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+              ) : (
+                <ShieldAlert className="w-4 h-4 text-red-600 shrink-0" />
+              )}
+              <span>
+                {isPending ? (
+                  <>
+                    <strong>Account Waiting for Admin Approval:</strong> Your
+                    email is verified, and an administrator will activate your
+                    account shortly.
+                  </>
+                ) : (
+                  <>
+                    <strong>Account {user.status}:</strong> Please contact
+                    WingPoll support for assistance.
+                  </>
+                )}
+              </span>
+              {bannerNotice && (
+                <span className="font-semibold text-[#14532D] bg-[#F0FDF4] border border-emerald-200 px-2 py-0.5 rounded">
+                  {bannerNotice}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleCheckApprovalStatus}
+                disabled={isCheckingApproval}
+                className="px-3 py-1.5 rounded bg-[#16A34A] hover:bg-[#15803d] text-white font-semibold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+              >
+                <RefreshCw
+                  className={`w-3.5 h-3.5 ${
+                    isCheckingApproval ? "animate-spin" : ""
+                  }`}
+                />
+                <span>
+                  {isCheckingApproval ? "Checking..." : "Check Approval Status"}
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Email Verification Reminder Banner for Unverified Firebase Users */}
         {firebaseUser && !emailVerified && (
@@ -321,9 +228,54 @@ export default function DashboardLayout({
         )}
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
-          <Suspense fallback={<LoadingSkeleton rows={3} variant="card" />}>
-            {children}
-          </Suspense>
+          {isPendingApproval ? (
+            <div className="max-w-xl mx-auto mt-6 bg-white border border-slate-200 rounded-lg p-6 shadow-xs space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-full bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-bold text-slate-900">
+                      {isPending
+                        ? "Awaiting Admin Approval"
+                        : `Account ${user.status}`}
+                    </h2>
+                    <p className="text-xs text-slate-500">{user.email}</p>
+                  </div>
+                </div>
+                <StatusBadge status={user.status} />
+              </div>
+
+              <p className="text-xs text-slate-600 leading-relaxed">
+                {isPending
+                  ? "Your email address is verified. Tasks, submissions, and withdrawal features will appear here automatically once an administrator approves your account."
+                  : `Your account is currently ${user.status}. Please contact WingPoll support for assistance.`}
+              </p>
+
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+                <span className="inline-flex items-center gap-1 text-[#16A34A] font-semibold">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Email Verified
+                </span>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await logoutUser();
+                    router.push("/login");
+                  }}
+                  className="inline-flex items-center gap-1.5 text-slate-600 hover:text-red-600 font-semibold cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <Suspense fallback={<LoadingSkeleton rows={3} variant="card" />}>
+              {children}
+            </Suspense>
+          )}
         </main>
       </div>
     </div>
