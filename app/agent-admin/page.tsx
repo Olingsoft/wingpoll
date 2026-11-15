@@ -394,7 +394,7 @@ export default function AgentAdminPage() {
         <div className="h-16 px-5 border-b border-slate-200 flex items-center justify-between">
           <div className="flex flex-col">
             <img
-              src="/logo.png"
+              src="/en-ke/logo.png"
               alt="WingPoll"
               className="h-7 w-auto object-contain"
             />

@@ -81,7 +81,7 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
         <div className="h-16 px-5 border-b border-slate-200 flex items-center justify-between shrink-0">
           <Link href="/" className="flex items-center gap-2">
             <img
-              src="/logo.png"
+              src="/en-ke/logo.png"
               alt="WingPoll"
               className="h-8 w-auto object-contain"
             />

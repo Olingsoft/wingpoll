@@ -152,7 +152,7 @@ export default function HomePage() {
         {/* HERO SECTION */}
         <section className="relative border-b border-slate-200 py-20 sm:py-28 overflow-hidden bg-slate-950">
           <Image
-            src="/hero-bg.jpg"
+            src="/en-ke/hero-bg.jpg"
             alt="WingPoll digital microtask workspace on a laptop"
             fill
             priority

@@ -60,7 +60,7 @@ export default function ForgotPasswordPage() {
         <div className="max-w-md w-full bg-white border border-slate-200 rounded-lg p-6 sm:p-8 shadow-xs">
           <div className="text-center mb-6">
             <img
-              src="/icon.png"
+              src="/en-ke/icon.png"
               alt="WingPoll"
               className="w-12 h-12 object-contain mx-auto mb-3"
             />

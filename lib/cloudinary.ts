@@ -17,7 +17,7 @@ export async function uploadToCloudinary(
   folder = "wingpoll_tasks"
 ): Promise<CloudinaryUploadResult> {
   // 1. Request a signed upload token from our Next.js API route
-  const signRes = await fetch("/api/cloudinary/sign", {
+  const signRes = await fetch("/en-ke/api/cloudinary/sign", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ folder }),

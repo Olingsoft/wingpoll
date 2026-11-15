@@ -1,16 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  basePath: "/en-ke",
   trailingSlash: false,
-  async rewrites() {
+  async redirects() {
     return [
       {
-        source: "/en-ke",
-        destination: "/",
-      },
-      {
-        source: "/en-ke/:path*",
-        destination: "/:path*",
+        source: "/",
+        destination: "/en-ke",
+        basePath: false,
+        permanent: false,
       },
     ];
   },

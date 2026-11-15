@@ -9,7 +9,7 @@ export function Footer() {
           <div className="lg:col-span-4 space-y-3">
             <div className="flex items-center">
               <img
-                src="/logo.png"
+                src="/en-ke/logo.png"
                 alt="WingPoll — Digital Microtask Platform"
                 width={118}
                 height={32}

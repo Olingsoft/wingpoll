@@ -14,8 +14,8 @@ export function ReferralCard() {
     typeof window !== "undefined" &&
     window.location.origin &&
     !window.location.origin.includes("localhost")
-      ? `${window.location.origin}/register?ref=${user.referralCode}`
-      : user.referralLink || `https://wingpoll.co.ke/register?ref=${user.referralCode}`;
+      ? `${window.location.origin}/en-ke/register?ref=${user.referralCode}`
+      : user.referralLink || `https://wingpoll.co.ke/en-ke/register?ref=${user.referralCode}`;
 
   const handleCopyCode = () => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
