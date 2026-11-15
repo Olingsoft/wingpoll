@@ -14,7 +14,9 @@ export function Navbar() {
         <Link href="/" className="flex items-center gap-2.5">
           <img
             src="/logo.png"
-            alt="WingPoll"
+            alt="WingPoll — Digital Microtask Platform"
+            width={132}
+            height={36}
             className="h-9 w-auto object-contain"
           />
         </Link>

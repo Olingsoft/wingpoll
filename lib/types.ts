@@ -210,3 +210,23 @@ export interface NotificationItem {
   type: "reward" | "submission" | "withdrawal" | "referral" | "system";
 }
 
+export interface BlogPost {
+  id: string;
+  slug: string;
+  title: string;
+  seoTitle?: string;
+  metaDescription?: string;
+  excerpt: string;
+  featuredImage: string;
+  featuredImageAlt: string;
+  category: string;
+  tags: string[];
+  author: string;
+  date: string;
+  publishedAt: string;
+  updatedAt: string;
+  readTime: string;
+  published: boolean;
+  content: string[];
+}
+

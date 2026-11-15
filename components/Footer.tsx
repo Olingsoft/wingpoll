@@ -10,7 +10,9 @@ export function Footer() {
             <div className="flex items-center">
               <img
                 src="/logo.png"
-                alt="WingPoll"
+                alt="WingPoll — Digital Microtask Platform"
+                width={118}
+                height={32}
                 className="h-8 w-auto object-contain"
               />
             </div>

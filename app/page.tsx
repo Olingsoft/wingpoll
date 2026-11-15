@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowRight,
   Award,
@@ -149,10 +150,15 @@ export default function HomePage() {
 
       <main className="flex-1">
         {/* HERO SECTION */}
-        <section
-          className="relative border-b border-slate-200 py-20 sm:py-28 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: "url('/hero-bg.jpg')" }}
-        >
+        <section className="relative border-b border-slate-200 py-20 sm:py-28 overflow-hidden bg-slate-950">
+          <Image
+            src="/hero-bg.jpg"
+            alt="WingPoll digital microtask workspace on a laptop"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-center"
+          />
           {/* Dark overlay for text legibility while keeping the laptop image visible */}
           <div className="absolute inset-0 bg-slate-950/70" />
 
