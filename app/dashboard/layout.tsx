@@ -45,6 +45,13 @@ export default function DashboardLayout({
   const [manualCodeOrLink, setManualCodeOrLink] = useState("");
   const [verifyingCode, setVerifyingCode] = useState(false);
 
+  // Redirect unverified non-admin users strictly to /verify-email until their email is verified
+  useEffect(() => {
+    if (!authLoading && firebaseUser && user.role !== "admin" && !emailVerified) {
+      router.replace("/verify-email");
+    }
+  }, [authLoading, firebaseUser, user.role, emailVerified, router]);
+
   // Auto-poll email verification status while on Step 1 gate
   useEffect(() => {
     if (!firebaseUser || emailVerified || user.role === "admin") return;

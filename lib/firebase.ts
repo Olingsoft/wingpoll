@@ -818,15 +818,11 @@ export async function sendVerificationEmail(targetUser?: FirebaseUser | null) {
       typeof err === "object" && err !== null && "code" in err
         ? String((err as { code: unknown }).code)
         : "";
-    if (
-      code === "auth/unauthorized-continue-uri" ||
-      code === "auth/invalid-continue-uri" ||
-      code === "auth/missing-continue-uri"
-    ) {
-      await sendEmailVerification(userToVerify);
-      return;
+    if (code === "auth/too-many-requests") {
+      throw err;
     }
-    throw err;
+    // Fallback to default Firebase verification email if custom continueUrl domain is not yet authorized in Firebase Console
+    await sendEmailVerification(userToVerify);
   }
 }
 

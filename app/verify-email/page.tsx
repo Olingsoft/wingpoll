@@ -43,6 +43,15 @@ export default function VerifyEmailPage() {
 
   const targetEmail = firebaseUser?.email || user.email;
 
+  // Once emailVerified becomes true, redirect to /dashboard (where the Waiting for Admin Approval page is shown)
+  useEffect(() => {
+    if (!firebaseUser || !emailVerified) return;
+    if (user.role === "admin") {
+      router.replace("/admin");
+    } else {
+      router.replace("/dashboard");
+    }
+  }, [firebaseUser, emailVerified, user.role, router]);
   // Automatically process ?oobCode=... or ?verified=true when user returns from email link on wingpoll.co.ke
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -57,8 +66,9 @@ export default function VerifyEmailPage() {
           await refreshUserProfile();
           setStatusMessage({
             type: "success",
-            text: "Step 1 Complete: Email verified! Now waiting for Admin to activate your account.",
+            text: "Email verified! Redirecting to Admin Approval page...",
           });
+          router.replace("/dashboard");
         })
         .catch((err) => {
           setStatusMessage({
@@ -70,17 +80,18 @@ export default function VerifyEmailPage() {
           setCheckingStatus(false);
         });
     } else if (verifiedFlag === "true") {
-      refreshEmailVerification().then((verified) => {
+      refreshEmailVerification().then(async (verified) => {
         if (verified) {
-          refreshUserProfile();
+          await refreshUserProfile();
           setStatusMessage({
             type: "success",
-            text: "Step 1 Complete: Email verified! Now waiting for Admin to activate your account.",
+            text: "Email verified! Redirecting to Admin Approval page...",
           });
+          router.replace("/dashboard");
         }
       });
     }
-  }, [verifyEmailWithCode, refreshEmailVerification, refreshUserProfile]);
+  }, [verifyEmailWithCode, refreshEmailVerification, refreshUserProfile, router]);
 
   // Auto-poll verification status every 5s and on window focus while unverified
   useEffect(() => {
