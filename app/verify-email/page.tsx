@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertCircle,
   CheckCircle2,
   Clock,
+  KeyRound,
   Loader2,
   LogOut,
   MailCheck,
@@ -26,18 +27,110 @@ export default function VerifyEmailPage() {
     emailVerified,
     refreshEmailVerification,
     resendEmailVerification,
+    verifyEmailWithCode,
     refreshUserProfile,
     logoutUser,
   } = useApp();
 
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [resending, setResending] = useState(false);
+  const [manualCodeOrLink, setManualCodeOrLink] = useState("");
+  const [verifyingCode, setVerifyingCode] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{
     type: "success" | "warning" | "error";
     text: string;
   } | null>(null);
 
   const targetEmail = firebaseUser?.email || user.email;
+
+  // Automatically process ?oobCode=... or ?verified=true when user returns from email link on wingpoll.co.ke
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const oobCode = params.get("oobCode");
+    const verifiedFlag = params.get("verified");
+
+    if (oobCode) {
+      setCheckingStatus(true);
+      verifyEmailWithCode(oobCode)
+        .then(async () => {
+          await refreshUserProfile();
+          setStatusMessage({
+            type: "success",
+            text: "Step 1 Complete: Email verified! Now waiting for Admin to activate your account.",
+          });
+        })
+        .catch((err) => {
+          setStatusMessage({
+            type: "error",
+            text: getFirebaseAuthErrorMessage(err),
+          });
+        })
+        .finally(() => {
+          setCheckingStatus(false);
+        });
+    } else if (verifiedFlag === "true") {
+      refreshEmailVerification().then((verified) => {
+        if (verified) {
+          refreshUserProfile();
+          setStatusMessage({
+            type: "success",
+            text: "Step 1 Complete: Email verified! Now waiting for Admin to activate your account.",
+          });
+        }
+      });
+    }
+  }, [verifyEmailWithCode, refreshEmailVerification, refreshUserProfile]);
+
+  // Auto-poll verification status every 5s and on window focus while unverified
+  useEffect(() => {
+    if (!firebaseUser || emailVerified) return;
+
+    const checkSilently = async () => {
+      try {
+        const isNowVerified = await refreshEmailVerification();
+        if (isNowVerified) {
+          await refreshUserProfile();
+          setStatusMessage({
+            type: "success",
+            text: "Step 1 Complete: Email verified! Now waiting for Admin to activate your account.",
+          });
+        }
+      } catch {
+        // Ignore background poll errors
+      }
+    };
+
+    const interval = setInterval(checkSilently, 5000);
+    window.addEventListener("focus", checkSilently);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", checkSilently);
+    };
+  }, [firebaseUser, emailVerified, refreshEmailVerification, refreshUserProfile]);
+
+  const handleVerifyCodeOrLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualCodeOrLink.trim()) return;
+    setStatusMessage(null);
+    setVerifyingCode(true);
+    try {
+      await verifyEmailWithCode(manualCodeOrLink);
+      await refreshUserProfile();
+      setManualCodeOrLink("");
+      setStatusMessage({
+        type: "success",
+        text: "Step 1 Complete: Email verified via code/link! Now waiting for Admin to activate your account.",
+      });
+    } catch (error) {
+      setStatusMessage({
+        type: "error",
+        text: getFirebaseAuthErrorMessage(error),
+      });
+    } finally {
+      setVerifyingCode(false);
+    }
+  };
 
   const handleCheckVerified = async () => {
     setStatusMessage(null);
@@ -214,23 +307,52 @@ export default function VerifyEmailPage() {
               {/* Instructions Box */}
               <div className="bg-slate-50 border border-slate-200 rounded-md p-4 space-y-2 text-xs text-slate-600">
                 <p className="font-semibold text-slate-800">
-                  How to complete Step 1:
+                  How to complete Step 1 on wingpoll.co.ke:
                 </p>
                 <ol className="list-decimal list-inside space-y-1.5">
                   <li>
-                    Open your email inbox for <strong>{targetEmail}</strong>.
+                    Open your email inbox (and check <strong>Spam / Junk</strong>) for{" "}
+                    <strong>{targetEmail}</strong>.
                   </li>
                   <li>
-                    Click the verification link in the email from{" "}
-                    <strong>WingPoll</strong>.
+                    Click the verification link in the email, <strong>OR</strong> copy
+                    and paste the verification link / code (`oobCode`) below.
                   </li>
                   <li>
-                    Click{" "}
-                    <strong>&ldquo;I&apos;ve Verified My Email&rdquo;</strong>{" "}
-                    below to proceed to Admin Account Activation.
+                    Once verified, your page will automatically advance to{" "}
+                    <strong>Step 2: Admin Account Activation</strong>.
                   </li>
                 </ol>
               </div>
+
+              {/* Paste Verification Code or Link Form */}
+              <form
+                onSubmit={handleVerifyCodeOrLink}
+                className="bg-slate-50 border border-slate-200 rounded-md p-3.5 space-y-2"
+              >
+                <label className="block text-xs font-semibold text-slate-700">
+                  Paste Verification Code or Link from Email (Optional)
+                </label>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <KeyRound className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={manualCodeOrLink}
+                      onChange={(e) => setManualCodeOrLink(e.target.value)}
+                      placeholder="Paste verification code or link..."
+                      className="w-full pl-8 pr-3 py-2 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:border-[#16A34A]"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={verifyingCode || !manualCodeOrLink.trim()}
+                    className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-md cursor-pointer disabled:opacity-50 shrink-0"
+                  >
+                    {verifyingCode ? "Verifying..." : "Verify Code"}
+                  </button>
+                </div>
+              </form>
 
               <div className="space-y-3">
                 <button

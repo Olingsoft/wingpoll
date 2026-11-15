@@ -14,6 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "https://wingpoll.co.ke"
+  ),
   title: "WingPoll — Microtask Earning Platform",
   description:
     "A Smarter Way to Get Digital Work Done. Complete simple digital tasks, data entry, document formatting, and image transcription and withdraw directly via M-Pesa.",

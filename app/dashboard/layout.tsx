@@ -1,12 +1,13 @@
 "use client";
 
-import React, { Suspense, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   AlertCircle,
   CheckCircle2,
   Clock,
+  KeyRound,
   Loader2,
   LogOut,
   MailCheck,
@@ -19,6 +20,7 @@ import { DashboardHeader } from "@/components/DashboardHeader";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useApp } from "@/context/AppContext";
+import { getFirebaseAuthErrorMessage } from "@/lib/firebase";
 
 export default function DashboardLayout({
   children,
@@ -35,10 +37,60 @@ export default function DashboardLayout({
     logoutUser,
     resendEmailVerification,
     refreshEmailVerification,
+    verifyEmailWithCode,
     refreshUserProfile,
   } = useApp();
   const [bannerNotice, setBannerNotice] = useState<string | null>(null);
   const [isCheckingApproval, setIsCheckingApproval] = useState(false);
+  const [manualCodeOrLink, setManualCodeOrLink] = useState("");
+  const [verifyingCode, setVerifyingCode] = useState(false);
+
+  // Auto-poll email verification status while on Step 1 gate
+  useEffect(() => {
+    if (!firebaseUser || emailVerified || user.role === "admin") return;
+
+    const checkSilently = async () => {
+      try {
+        const verified = await refreshEmailVerification();
+        if (verified) {
+          await refreshUserProfile();
+          setBannerNotice("Step 1 Complete: Email verified!");
+        }
+      } catch {
+        // Ignore poll errors
+      }
+    };
+
+    const interval = setInterval(checkSilently, 5000);
+    window.addEventListener("focus", checkSilently);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", checkSilently);
+    };
+  }, [
+    firebaseUser,
+    emailVerified,
+    user.role,
+    refreshEmailVerification,
+    refreshUserProfile,
+  ]);
+
+  const handleVerifyCodeOrLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualCodeOrLink.trim()) return;
+    setBannerNotice(null);
+    setVerifyingCode(true);
+    try {
+      await verifyEmailWithCode(manualCodeOrLink);
+      await refreshUserProfile();
+      setManualCodeOrLink("");
+      setBannerNotice("Step 1 Complete: Email verified!");
+    } catch (error) {
+      setBannerNotice(getFirebaseAuthErrorMessage(error));
+    } finally {
+      setVerifyingCode(false);
+    }
+  };
 
   const handleQuickResend = async () => {
     try {
@@ -134,6 +186,35 @@ export default function DashboardLayout({
               {bannerNotice}
             </div>
           )}
+
+          {/* Optional Paste Verification Code or Link from Email */}
+          <form
+            onSubmit={handleVerifyCodeOrLink}
+            className="bg-slate-50 border border-slate-200 rounded-md p-3.5 space-y-2"
+          >
+            <label className="block text-xs font-semibold text-slate-700">
+              Paste Verification Code or Link from Email (Optional)
+            </label>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <KeyRound className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={manualCodeOrLink}
+                  onChange={(e) => setManualCodeOrLink(e.target.value)}
+                  placeholder="Paste verification code or link..."
+                  className="w-full pl-8 pr-3 py-2 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:border-[#16A34A]"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={verifyingCode || !manualCodeOrLink.trim()}
+                className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-md cursor-pointer disabled:opacity-50 shrink-0"
+              >
+                {verifyingCode ? "Verifying..." : "Verify Code"}
+              </button>
+            </div>
+          </form>
 
           <div className="space-y-2.5 pt-1">
             <button

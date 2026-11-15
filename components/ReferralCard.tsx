@@ -11,9 +11,11 @@ export function ReferralCard() {
   const [sharedNotice, setSharedNotice] = useState(false);
 
   const activeReferralLink =
-    typeof window !== "undefined"
+    typeof window !== "undefined" &&
+    window.location.origin &&
+    !window.location.origin.includes("localhost")
       ? `${window.location.origin}/register?ref=${user.referralCode}`
-      : user.referralLink;
+      : user.referralLink || `https://wingpoll.co.ke/register?ref=${user.referralCode}`;
 
   const handleCopyCode = () => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {

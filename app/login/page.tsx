@@ -18,6 +18,7 @@ import {
   getFirebaseAuthErrorMessage,
   loginWithEmail,
   saveUserToFirestore,
+  sendVerificationEmail,
   signInWithGooglePopup,
 } from "@/lib/firebase";
 import { useApp } from "@/context/AppContext";
@@ -57,7 +58,10 @@ export default function LoginPage() {
       updateUserProfile(savedProfile);
       if (savedProfile.role === "admin") {
         router.push("/admin");
-      } else if (!fbUser.emailVerified) {
+      } else if (!fbUser.emailVerified && !savedProfile.emailVerified) {
+        sendVerificationEmail(fbUser).catch(() => {
+          // Ignore if a verification email was already sent very recently
+        });
         router.push("/verify-email");
       } else {
         router.push("/dashboard");
@@ -80,7 +84,10 @@ export default function LoginPage() {
       updateUserProfile(savedProfile);
       if (savedProfile.role === "admin") {
         router.push("/admin");
-      } else if (!fbUser.emailVerified) {
+      } else if (!fbUser.emailVerified && !savedProfile.emailVerified) {
+        sendVerificationEmail(fbUser).catch(() => {
+          // Ignore if a verification email was already sent very recently
+        });
         router.push("/verify-email");
       } else {
         router.push("/dashboard");

@@ -8,6 +8,7 @@ import {
   signInWithPopup,
   sendPasswordResetEmail,
   sendEmailVerification,
+  applyActionCode,
   reload,
   signOut,
   updateProfile,
@@ -35,6 +36,11 @@ import {
   UserRole,
   Withdrawal,
 } from "./types";
+
+// Official WingPoll production domain
+export const WINGPOLL_DOMAIN = (
+  process.env.NEXT_PUBLIC_SITE_URL || "https://wingpoll.co.ke"
+).replace(/\/$/, "");
 
 // Your web app's Firebase configuration loaded from .env
 const firebaseConfig = {
@@ -151,7 +157,7 @@ export async function saveUserToFirestore(
     referralEarnings: existingData.referralEarnings ?? 0,
     taskEarnings: existingData.taskEarnings ?? 0,
     referralCode: refCode,
-    referralLink: `https://wingpoll.co.ke/register?ref=${refCode}`,
+    referralLink: `${WINGPOLL_DOMAIN}/register?ref=${refCode}`,
     referredByCode:
       extra?.referralCodeUsed?.trim().toUpperCase() ||
       existingData.referredByCode ||
@@ -782,9 +788,86 @@ export async function grantReferralRewardInFirestore(
 }
 
 /**
+ * Send or Resend Email Verification Link to the current Firebase user.
+ * Configures continueUrl to redirect back to https://wingpoll.co.ke/verify-email?verified=true,
+ * and falls back to default Firebase sendEmailVerification if wingpoll.co.ke is not yet in
+ * Firebase Console -> Authentication -> Settings -> Authorized domains.
+ */
+export async function sendVerificationEmail(targetUser?: FirebaseUser | null) {
+  const userToVerify = targetUser ?? auth.currentUser;
+  if (!userToVerify) {
+    throw new Error("No signed-in user found to verify.");
+  }
+
+  const origin =
+    typeof window !== "undefined" &&
+    window.location.origin &&
+    !window.location.origin.includes("localhost")
+      ? window.location.origin
+      : WINGPOLL_DOMAIN;
+
+  const continueUrl = `${origin}/verify-email?verified=true`;
+
+  try {
+    await sendEmailVerification(userToVerify, {
+      url: continueUrl,
+      handleCodeInApp: false,
+    });
+  } catch (err: unknown) {
+    const code =
+      typeof err === "object" && err !== null && "code" in err
+        ? String((err as { code: unknown }).code)
+        : "";
+    if (
+      code === "auth/unauthorized-continue-uri" ||
+      code === "auth/invalid-continue-uri" ||
+      code === "auth/missing-continue-uri"
+    ) {
+      await sendEmailVerification(userToVerify);
+      return;
+    }
+    throw err;
+  }
+}
+
+/**
+ * Verify a user's email directly using an oobCode or full verification link from their email
+ */
+export async function verifyEmailWithActionCode(
+  codeOrUrl: string
+): Promise<boolean> {
+  const trimmed = codeOrUrl.trim();
+  if (!trimmed) {
+    throw new Error(
+      "Please enter the verification link or code from your email."
+    );
+  }
+
+  let oobCode = trimmed;
+  if (trimmed.includes("oobCode=")) {
+    try {
+      const urlObj = new URL(trimmed);
+      oobCode = urlObj.searchParams.get("oobCode") || trimmed;
+    } catch {
+      const match = trimmed.match(/[?&]oobCode=([^&#\s]+)/);
+      if (match?.[1]) {
+        oobCode = decodeURIComponent(match[1]);
+      }
+    }
+  }
+
+  await applyActionCode(auth, oobCode);
+  if (auth.currentUser) {
+    await reload(auth.currentUser);
+    await updateUserInFirestore(auth.currentUser.uid, { emailVerified: true });
+  }
+  return true;
+}
+
+/**
  * Register a new normal user account with Email & Password, set Display Name,
- * save user to Firestore `users` table with role="user" and status="Pending Approval",
- * link referral code if provided, and send a Firebase Email Verification link
+ * immediately send the Firebase Email Verification link, save user to Firestore
+ * `users` table with role="user" and status="Pending Approval", and link referral code.
  */
 export async function registerWithEmail(
   fullName: string,
@@ -804,6 +887,13 @@ export async function registerWithEmail(
     });
   }
 
+  // Immediately dispatch verification email so it is never delayed by Firestore calls
+  try {
+    await sendVerificationEmail(credential.user);
+  } catch (verifyErr) {
+    console.warn("Initial verification email dispatch warning:", verifyErr);
+  }
+
   // Save normal user to Firestore `users` collection with role="user" (status="Pending Approval")
   const newUserProfile = await saveUserToFirestore(credential.user, {
     fullName,
@@ -818,19 +908,7 @@ export async function registerWithEmail(
     await linkReferralOnRegistration(newUserProfile, referralCodeUsed);
   }
 
-  await sendEmailVerification(credential.user);
   return credential.user;
-}
-
-/**
- * Send or Resend Email Verification Link to the current Firebase user
- */
-export async function sendVerificationEmail(targetUser?: FirebaseUser | null) {
-  const userToVerify = targetUser ?? auth.currentUser;
-  if (!userToVerify) {
-    throw new Error("No signed-in user found to verify.");
-  }
-  await sendEmailVerification(userToVerify);
 }
 
 /**
@@ -861,10 +939,29 @@ export async function signInWithGooglePopup(referralCodeUsed?: string) {
 }
 
 /**
- * Send Password Reset Email via Firebase Auth
+ * Send Password Reset Email via Firebase Auth with redirect back to wingpoll.co.ke
  */
 export async function sendFirebasePasswordReset(email: string) {
-  await sendPasswordResetEmail(auth, email);
+  try {
+    await sendPasswordResetEmail(auth, email, {
+      url: `${WINGPOLL_DOMAIN}/login`,
+      handleCodeInApp: false,
+    });
+  } catch (err: unknown) {
+    const code =
+      typeof err === "object" && err !== null && "code" in err
+        ? String((err as { code: unknown }).code)
+        : "";
+    if (
+      code === "auth/unauthorized-continue-uri" ||
+      code === "auth/invalid-continue-uri" ||
+      code === "auth/missing-continue-uri"
+    ) {
+      await sendPasswordResetEmail(auth, email);
+      return;
+    }
+    throw err;
+  }
 }
 
 /**
@@ -894,6 +991,10 @@ export function getFirebaseAuthErrorMessage(error: unknown): string {
       return "Password is too weak. Please use at least 6 characters.";
     case "auth/invalid-email":
       return "Please enter a valid email address.";
+    case "auth/invalid-action-code":
+      return "That verification code or link is invalid or has already been used.";
+    case "auth/expired-action-code":
+      return "That verification code or link has expired. Please click 'Resend Verification Email' to get a fresh one.";
     case "auth/popup-closed-by-user":
       return "Google sign-in popup was closed before completing authentication.";
     case "auth/cancelled-popup-request":
@@ -901,7 +1002,7 @@ export function getFirebaseAuthErrorMessage(error: unknown): string {
     case "auth/popup-blocked":
       return "Sign-in popup was blocked by your browser. Please allow popups for this site.";
     case "auth/too-many-requests":
-      return "Too many requests. Please wait a minute before trying again.";
+      return "A verification email was just sent recently. Please check your inbox (and spam folder) or wait a minute before requesting another.";
     case "auth/network-request-failed":
       return "Network error. Please check your internet connection and try again.";
     default:

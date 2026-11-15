@@ -46,6 +46,7 @@ import {
   saveWithdrawalToFirestore,
   sendVerificationEmail,
   updateUserInFirestore,
+  verifyEmailWithActionCode,
 } from "@/lib/firebase";
 
 interface AppContextType {
@@ -56,6 +57,7 @@ interface AppContextType {
   logoutUser: () => Promise<void>;
   refreshEmailVerification: () => Promise<boolean>;
   resendEmailVerification: () => Promise<void>;
+  verifyEmailWithCode: (codeOrUrl: string) => Promise<boolean>;
   refreshUserProfile: () => Promise<UserProfile | null>;
   allUsers: UserProfile[];
   tasks: Task[];
@@ -163,6 +165,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (fbUser) {
         const savedProfile = await saveUserToFirestore(fbUser);
         setUser(savedProfile);
+        setEmailVerified(
+          Boolean(fbUser.emailVerified || savedProfile.emailVerified)
+        );
 
         const [latestUsers, latestReferrals] = await Promise.all([
           fetchAllUsersFromFirestore(),
@@ -207,15 +212,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const refreshEmailVerification = async (): Promise<boolean> => {
     const verified = await reloadFirebaseUser();
-    setEmailVerified(verified);
+    const isNowVerified = Boolean(verified || user.emailVerified);
+    setEmailVerified(isNowVerified);
     if (auth.currentUser) {
       setFirebaseUser(auth.currentUser);
     }
-    return verified;
+    if (isNowVerified) {
+      setUser((prev) => ({ ...prev, emailVerified: true }));
+    }
+    return isNowVerified;
   };
 
   const resendEmailVerification = async (): Promise<void> => {
     await sendVerificationEmail(auth.currentUser);
+  };
+
+  const verifyEmailWithCode = async (codeOrUrl: string): Promise<boolean> => {
+    await verifyEmailWithActionCode(codeOrUrl);
+    setEmailVerified(true);
+    setUser((prev) => ({ ...prev, emailVerified: true }));
+    if (auth.currentUser) {
+      setFirebaseUser(auth.currentUser);
+    }
+    return true;
   };
 
   const refreshUserProfile = async (): Promise<UserProfile | null> => {
@@ -1057,6 +1076,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         logoutUser,
         refreshEmailVerification,
         resendEmailVerification,
+        verifyEmailWithCode,
         refreshUserProfile,
         allUsers,
         tasks,
