@@ -12,7 +12,7 @@ import { EmptyState } from "@/components/EmptyState";
 const ITEMS_PER_PAGE = 6;
 
 export default function AvailableTasksPage() {
-  const { tasks } = useApp();
+  const { tasks, submissions, user } = useApp();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<
     "All" | TaskCategory
@@ -22,8 +22,18 @@ export default function AvailableTasksPage() {
   );
   const [currentPage, setCurrentPage] = useState(1);
 
+  const submittedTaskIds = useMemo(
+    () =>
+      new Set(
+        submissions.filter((s) => s.userId === user.id).map((s) => s.taskId)
+      ),
+    [submissions, user.id]
+  );
+
   const filteredTasks = useMemo(() => {
-    const activeTasks = tasks.filter((t) => t.active);
+    const activeTasks = tasks.filter(
+      (t) => t.active && !submittedTaskIds.has(t.id)
+    );
 
     const byCat =
       selectedCategory === "All"
@@ -46,7 +56,7 @@ export default function AvailableTasksPage() {
       if (sortBy === "reward_low") return a.reward - b.reward;
       return b.createdAt.localeCompare(a.createdAt);
     });
-  }, [tasks, selectedCategory, searchQuery, sortBy]);
+  }, [tasks, submittedTaskIds, selectedCategory, searchQuery, sortBy]);
 
   const totalPages = Math.max(
     1,

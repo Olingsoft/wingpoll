@@ -21,7 +21,12 @@ import { StatusBadge } from "@/components/StatusBadge";
 export default function DashboardOverviewPage() {
   const { user, tasks, transactions, submissions, referrals } = useApp();
 
-  const previewTasks = tasks.filter((t) => t.active).slice(0, 3);
+  const submittedTaskIds = new Set(
+    submissions.filter((s) => s.userId === user.id).map((s) => s.taskId)
+  );
+  const previewTasks = tasks
+    .filter((t) => t.active && !submittedTaskIds.has(t.id))
+    .slice(0, 3);
   const userSubmissions = submissions
     .filter((s) => s.userId === user.id)
     .slice(0, 4);

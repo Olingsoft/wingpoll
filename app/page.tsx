@@ -141,10 +141,15 @@ const FAQS = [
 ];
 
 export default function HomePage() {
-  const { tasks } = useApp();
+  const { tasks, submissions, user } = useApp();
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
-  const previewTasks = tasks.filter((t) => t.active).slice(0, 4);
+  const submittedTaskIds = new Set(
+    submissions.filter((s) => s.userId === user.id).map((s) => s.taskId)
+  );
+  const previewTasks = tasks
+    .filter((t) => t.active && !submittedTaskIds.has(t.id))
+    .slice(0, 4);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F8FAFC]">

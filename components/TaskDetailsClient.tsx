@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import Link from "next/link";
@@ -13,14 +13,17 @@ import {
   FileSpreadsheet,
   FileText,
   Film,
+  Gift,
   Image as ImageIcon,
   Layers,
   Loader2,
   Maximize2,
   Minimize2,
+  MousePointerClick,
   Plus,
   RotateCcw,
   Send,
+  Sparkles,
   Trash2,
   Upload,
   Users,
@@ -32,6 +35,8 @@ import { formatFileSize, uploadToCloudinary } from "@/lib/cloudinary";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
 import { AdvertisementBanner } from "@/components/AdvertisementBanner";
+import { NativeAdBanner } from "@/components/NativeAdBanner";
+import { IframeBannerAd } from "@/components/IframeBannerAd";
 
 const FORMAT_LABELS: { id: SubmissionFormat; label: string }[] = [
   { id: "text_input", label: "Single Text Input" },
@@ -325,6 +330,44 @@ export default function TaskDetailsPage() {
     );
   }
 
+  if (
+    existingSubmission &&
+    existingSubmission.status !== "Revision Required" &&
+    !isEditingSubmission
+  ) {
+    return (
+      <div className="bg-white border border-slate-200 rounded-lg p-8 max-w-xl mx-auto text-center space-y-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+        <div className="w-12 h-12 rounded-full bg-[#F0FDF4] border border-emerald-200 text-[#16A34A] flex items-center justify-center mx-auto">
+          <CheckCircle2 className="w-6 h-6" />
+        </div>
+        <div className="space-y-1.5">
+          <h1 className="text-lg font-bold text-slate-900">
+            Task Already Completed
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-600">
+            You have already submitted this task ({existingSubmission.status}).
+            Completed tasks are hidden from your available tasks list.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+          <Link
+            href="/dashboard/tasks"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-[#16A34A] hover:bg-[#15803d] text-white rounded-md transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Browse Available Tasks</span>
+          </Link>
+          <Link
+            href="/dashboard/submissions"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold border border-slate-200 text-slate-700 hover:border-[#16A34A] rounded-md transition-colors"
+          >
+            <span>View My Submissions</span>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Top Breadcrumb & Status */}
@@ -346,6 +389,62 @@ export default function TaskDetailsPage() {
             <StatusBadge status={existingSubmission.status} size="md" />
           </div>
         )}
+      </div>
+
+      {/* Top Bonus Earnings & Sponsored Partner Offers Section */}
+      <div className="bg-white border border-emerald-200 rounded-lg overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+        <div className="bg-[#F0FDF4] border-b border-emerald-200 px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-md bg-[#16A34A] text-white flex items-center justify-center shrink-0 mt-0.5">
+              <Gift className="w-4 h-4" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-sm font-bold text-[#14532D]">
+                  Bonus Earnings — Sponsored Partner Offers
+                </h2>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white text-[#16A34A] border border-emerald-200">
+                  <Sparkles className="w-3 h-3" />
+                  Earn Extra
+                </span>
+              </div>
+              <p className="text-xs text-slate-700 leading-relaxed">
+                <strong>Instructions:</strong> Before completing your task, click
+                and explore the sponsored partner offers below to check out
+                featured services and qualify for bonus earnings on your WingPoll
+                account.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white border border-emerald-200 rounded-md px-3.5 py-2 shrink-0 text-left sm:text-right">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+              Your Bonus &amp; Balance
+            </p>
+            <p className="text-sm font-bold text-[#14532D]">
+              KSh {user.availableBalance.toLocaleString()}
+            </p>
+          </div>
+        </div>
+
+        <div className="p-4 sm:p-5 bg-[#F8FAFC] space-y-4">
+          <div className="flex items-center justify-between text-[11px] text-slate-500">
+            <span className="inline-flex items-center gap-1.5 font-semibold uppercase tracking-wider text-slate-500">
+              <MousePointerClick className="w-3.5 h-3.5 text-[#16A34A]" />
+              <span>Sponsored Partner Offers (Click to Explore)</span>
+            </span>
+            <Link
+              href="/dashboard/earnings"
+              className="font-semibold text-[#16A34A] hover:underline"
+            >
+              View Earnings →
+            </Link>
+          </div>
+
+          <NativeAdBanner />
+          <IframeBannerAd />
+          <AdvertisementBanner position="task_list_inline" />
+        </div>
       </div>
 
       {/* Aborted / Cancelled Notification Banner */}
