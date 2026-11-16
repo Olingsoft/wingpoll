@@ -46,7 +46,7 @@ const NAV_ITEMS = [
 export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logoutUser } = useApp();
+  const { logoutUser } = useApp();
 
   const handleLogout = async () => {
     await logoutUser();

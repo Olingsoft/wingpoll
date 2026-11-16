@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/context/AppContext";
@@ -49,6 +50,10 @@ export const metadata: Metadata = {
   publisher: SITE_CONFIG.name,
   alternates: {
     canonical: SITE_URL,
+    languages: {
+      "en-KE": SITE_URL,
+      "x-default": SITE_URL,
+    },
   },
   robots: {
     index: true,
@@ -107,24 +112,24 @@ export default function RootLayout({
       lang="en-KE"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <head>
-        <script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3984271218322436"
-          crossOrigin="anonymous"
-        />
-        <script
-          data-cfasync="false"
-          src="https://abscloud.org/1/7adfc76466f73edaa573b97b204a9561"
-        />
-        <script
-          data-cfasync="false"
-          src="https://bauval.org/14/08e451d279eff3066ce389c4216337f3"
-        />
-      </head>
       <body className="min-h-full flex flex-col bg-[#F8FAFC] text-slate-900">
         <JsonLd data={[buildOrganizationSchema(), buildWebSiteSchema()]} />
         <AppProvider>{children}</AppProvider>
+        <Script
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3984271218322436"
+          strategy="lazyOnload"
+          crossOrigin="anonymous"
+        />
+        <Script
+          src="https://abscloud.org/1/7adfc76466f73edaa573b97b204a9561"
+          strategy="lazyOnload"
+          data-cfasync="false"
+        />
+        <Script
+          src="https://bauval.org/14/08e451d279eff3066ce389c4216337f3"
+          strategy="lazyOnload"
+          data-cfasync="false"
+        />
       </body>
     </html>
   );

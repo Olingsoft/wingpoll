@@ -5,9 +5,15 @@ export const ROOT_DOMAIN = (
   process.env.NEXT_PUBLIC_ROOT_URL || "https://wingpoll.co.ke"
 ).replace(/\/$/, "");
 
-export const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL || `${ROOT_DOMAIN}/en-ke`
+export const BASE_PATH = "/en-ke";
+
+const rawSiteUrl = (
+  process.env.NEXT_PUBLIC_SITE_URL || ROOT_DOMAIN
 ).replace(/\/$/, "");
+
+export const SITE_URL = rawSiteUrl.endsWith(BASE_PATH)
+  ? rawSiteUrl
+  : `${rawSiteUrl}${BASE_PATH}`;
 
 export const SITE_CONFIG = {
   name: "WingPoll",
@@ -72,6 +78,10 @@ export function buildPageMetadata({
     keywords,
     alternates: {
       canonical: canonicalUrl,
+      languages: {
+        "en-KE": canonicalUrl,
+        "x-default": canonicalUrl,
+      },
     },
     robots: noIndex
       ? {
@@ -180,6 +190,31 @@ export function buildBreadcrumbSchema(
       name: item.name,
       item: buildCanonicalUrl(item.path),
     })),
+  };
+}
+
+export function buildWebPageSchema({
+  title,
+  description,
+  path,
+}: {
+  title: string;
+  description: string;
+  path: string;
+}) {
+  const url = buildCanonicalUrl(path);
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    name: title,
+    description,
+    url,
+    inLanguage: "en-KE",
+    isPartOf: {
+      "@type": "WebSite",
+      name: SITE_CONFIG.name,
+      url: SITE_URL,
+    },
   };
 }
 

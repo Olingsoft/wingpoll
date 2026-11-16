@@ -201,18 +201,22 @@ export function BlogsClient({ posts }: { posts: BlogPost[] }) {
             className="flex items-center justify-center gap-2 pt-4"
           >
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <button
+              <Link
                 key={page}
-                type="button"
-                onClick={() => setCurrentPage(page)}
-                className={`px-3 py-1.5 rounded-md text-xs font-semibold cursor-pointer ${
+                href={page === 1 ? "/blogs" : `/blogs?page=${page}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  setCurrentPage(page);
+                }}
+                aria-current={safePage === page ? "page" : undefined}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold ${
                   safePage === page
                     ? "bg-[#16A34A] text-white"
                     : "bg-white border border-slate-200 text-slate-700 hover:border-[#16A34A]"
                 }`}
               >
                 {page}
-              </button>
+              </Link>
             ))}
           </nav>
         )}
