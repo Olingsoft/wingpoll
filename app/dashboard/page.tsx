@@ -6,6 +6,8 @@ import {
   ArrowRight,
   CheckCircle2,
   Clock,
+  PlayCircle,
+  Sparkles,
   TrendingUp,
   Users,
   Wallet,
@@ -41,6 +43,30 @@ export default function DashboardOverviewPage() {
     <div className="space-y-6">
       {/* Top Sponsored Dashboard Banner */}
       <AdvertisementBanner position="dashboard_banner" />
+
+      {/* Daily Easy Earning Quick Action Card */}
+      <div className="bg-linear-to-r from-[#14532D] to-[#16A34A] rounded-lg p-5 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+        <div className="space-y-1">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/15 text-[11px] font-semibold text-emerald-100">
+            <Sparkles className="w-3 h-3" />
+            <span>Daily Easy Earning</span>
+          </div>
+          <h2 className="text-base sm:text-lg font-bold">
+            Watch Short Video Ads &amp; Earn Instant KSh Rewards
+          </h2>
+          <p className="text-xs text-emerald-100">
+            Finish watching each daily sponsored video ad to 100% to unlock
+            instant KSh credits directly to your available balance.
+          </p>
+        </div>
+        <Link
+          href="/dashboard/daily-earning"
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold text-[#14532D] bg-white hover:bg-emerald-50 rounded-md shadow-xs shrink-0 transition-colors"
+        >
+          <PlayCircle className="w-4 h-4 text-[#16A34A]" />
+          <span>Open Daily Easy Earning</span>
+        </Link>
+      </div>
 
       {/* 4 Overview Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

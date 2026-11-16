@@ -78,6 +78,11 @@ interface AppContextType {
   ) => void;
   cancelSubmission: (submissionId: string) => void;
   requestWithdrawal: (amount: number, mpesaNumber: string) => Withdrawal;
+  claimDailyVideoAdReward: (
+    adId: string,
+    adTitle: string,
+    rewardAmount: number
+  ) => Promise<boolean>;
   updateUserProfile: (updates: Partial<UserProfile>) => void;
   markAllNotificationsRead: () => void;
   markNotificationRead: (id: string) => void;
@@ -1104,6 +1109,67 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const claimDailyVideoAdReward = async (
+    adId: string,
+    adTitle: string,
+    rewardAmount: number
+  ): Promise<boolean> => {
+    const today = new Date().toISOString().slice(0, 10);
+    const currentHistory = user.dailyAdHistory || {};
+    const watchedToday = currentHistory[today] || [];
+
+    if (watchedToday.includes(adId) || rewardAmount <= 0) {
+      return false;
+    }
+
+    const updatedHistory: Record<string, string[]> = {
+      ...currentHistory,
+      [today]: [...watchedToday, adId],
+    };
+
+    const nextAvailable = Number(user.availableBalance ?? 0) + rewardAmount;
+    const nextTotal = Number(user.totalEarnings ?? 0) + rewardAmount;
+
+    const updatedFields: Partial<UserProfile> = {
+      availableBalance: nextAvailable,
+      totalEarnings: nextTotal,
+      dailyAdHistory: updatedHistory,
+    };
+
+    setUser((prev) => ({ ...prev, ...updatedFields }));
+    setAllUsers((prev) =>
+      prev.map((u) => (u.id === user.id ? { ...u, ...updatedFields } : u))
+    );
+    await updateUserInFirestore(user.id, updatedFields);
+
+    const newTxn: Transaction = {
+      id: `txn-ad-${Date.now()}`,
+      userId: user.id,
+      reference: `AD-${Math.floor(100000 + Math.random() * 900000)}`,
+      date: today,
+      description: `Daily Easy Earning — Watched Video Ad: ${adTitle}`,
+      amount: rewardAmount,
+      type: "Daily Video Ad",
+      status: "Completed",
+    };
+    setTransactions((prev) => [newTxn, ...prev]);
+    saveTransactionToFirestore(newTxn);
+
+    const newNotif: NotificationItem = {
+      id: `notif-ad-${Date.now()}`,
+      userId: user.id,
+      title: "Daily Video Ad Reward Credited",
+      message: `You earned KSh ${rewardAmount} for watching "${adTitle}".`,
+      time: "Just now",
+      read: false,
+      type: "reward",
+    };
+    setNotifications((prev) => [newNotif, ...prev]);
+    saveNotificationToFirestore(newNotif);
+
+    return true;
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -1128,6 +1194,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updateSubmission,
         cancelSubmission,
         requestWithdrawal,
+        claimDailyVideoAdReward,
         updateUserProfile,
         markAllNotificationsRead,
         markNotificationRead,

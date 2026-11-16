@@ -104,6 +104,7 @@ export interface Withdrawal {
 export type TransactionType =
   | "Task Reward"
   | "Referral Reward"
+  | "Daily Video Ad"
   | "Withdrawal"
   | "Withdrawal Reversal";
 
@@ -204,6 +205,7 @@ export interface UserProfile {
   assignedAgentId?: string;
   assignedAgentName?: string;
   assignedAgentEmail?: string;
+  dailyAdHistory?: Record<string, string[]>;
   joinedDate: string;
   status: UserAccountStatus;
 }

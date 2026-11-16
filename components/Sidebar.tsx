@@ -12,6 +12,7 @@ import {
   History,
   LayoutDashboard,
   LogOut,
+  PlayCircle,
   TrendingUp,
   User,
   Users,
@@ -26,6 +27,11 @@ interface SidebarProps {
 const NAV_ITEMS = [
   { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { label: "Available Tasks", href: "/dashboard/tasks", icon: Briefcase },
+  {
+    label: "Daily Easy Earning",
+    href: "/dashboard/daily-earning",
+    icon: PlayCircle,
+  },
   {
     label: "My Submissions",
     href: "/dashboard/submissions",
