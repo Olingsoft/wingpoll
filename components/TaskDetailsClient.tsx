@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Clock,
   Edit3,
+  ExternalLink,
   Eye,
   FileSpreadsheet,
   FileText,
@@ -27,6 +28,7 @@ import {
   Trash2,
   Upload,
   Users,
+  X,
   XCircle,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
@@ -68,6 +70,18 @@ export default function TaskDetailsPage() {
     task?.submissionFormat || "multiline_text"
   );
   const [imageZoomed, setImageZoomed] = useState(false);
+  const [fullImageOpen, setFullImageOpen] = useState(false);
+
+  useEffect(() => {
+    if (!fullImageOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setFullImageOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [fullImageOpen]);
   const [isEditingSubmission, setIsEditingSubmission] = useState(false);
   const [abortConfirmOpen, setAbortConfirmOpen] = useState(false);
   const [actionBannerMessage, setActionBannerMessage] = useState<{
@@ -643,25 +657,40 @@ export default function TaskDetailsPage() {
                   </div>
                 </div>
 
-                {task.attachment.type === "image" &&
+                {(task.attachment.type === "image" ||
+                  task.attachment.previewUrl?.match(
+                    /\.(png|jpe?g|webp|gif|svg)(\?|$)/i
+                  )) &&
+                  task.attachment.type !== "pdf" &&
+                  !task.attachment.previewUrl?.match(/\.pdf(\?|$)/i) &&
                   task.attachment.previewUrl && (
-                    <button
-                      type="button"
-                      onClick={() => setImageZoomed((prev) => !prev)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-white border border-slate-300 rounded-md text-slate-700 hover:bg-slate-100 cursor-pointer"
-                    >
-                      {imageZoomed ? (
-                        <>
-                          <Minimize2 className="w-3.5 h-3.5 text-[#16A34A]" />
-                          <span>Fit to Screen</span>
-                        </>
-                      ) : (
-                        <>
-                          <Maximize2 className="w-3.5 h-3.5 text-[#16A34A]" />
-                          <span>Zoom Image</span>
-                        </>
-                      )}
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setImageZoomed((prev) => !prev)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-white border border-slate-300 rounded-md text-slate-700 hover:bg-slate-100 cursor-pointer"
+                      >
+                        {imageZoomed ? (
+                          <>
+                            <Minimize2 className="w-3.5 h-3.5 text-[#16A34A]" />
+                            <span>Fit to Screen</span>
+                          </>
+                        ) : (
+                          <>
+                            <Maximize2 className="w-3.5 h-3.5 text-[#16A34A]" />
+                            <span>Zoom Image</span>
+                          </>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFullImageOpen(true)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-[#16A34A] text-white rounded-md hover:bg-[#15803d] cursor-pointer"
+                      >
+                        <Maximize2 className="w-3.5 h-3.5" />
+                        <span>Open Full Image</span>
+                      </button>
+                    </div>
                   )}
               </div>
 
@@ -693,7 +722,9 @@ export default function TaskDetailsPage() {
                     <img
                       src={task.attachment.previewUrl}
                       alt={task.attachment.name}
-                      className={`rounded mx-auto transition-all ${
+                      onClick={() => setFullImageOpen(true)}
+                      title="Click to open full image"
+                      className={`rounded mx-auto transition-all cursor-zoom-in ${
                         imageZoomed
                           ? "w-[140%] max-w-none"
                           : "w-full max-h-[520px] object-contain"
@@ -1316,6 +1347,54 @@ export default function TaskDetailsPage() {
           },
         ]}
       />
+      {/* Full-Screen Image Lightbox */}
+      {fullImageOpen && task.attachment.previewUrl && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Full image preview: ${task.attachment.name}`}
+          onClick={() => setFullImageOpen(false)}
+          className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-xs flex flex-col"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center justify-between gap-4 px-4 sm:px-6 py-3 bg-slate-900/90 border-b border-slate-800 text-white"
+          >
+            <p className="text-xs sm:text-sm font-semibold truncate">
+              {task.attachment.name}
+            </p>
+            <div className="flex items-center gap-2 shrink-0">
+              <a
+                href={task.attachment.previewUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-white/10 hover:bg-white/20 rounded-md transition-colors"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Open in New Tab</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => setFullImageOpen(false)}
+                aria-label="Close full image"
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-white text-slate-900 hover:bg-slate-100 rounded-md cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Close</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-auto flex items-center justify-center p-4 sm:p-8">
+            <img
+              src={task.attachment.previewUrl}
+              alt={task.attachment.name}
+              onClick={(e) => e.stopPropagation()}
+              className="max-w-full max-h-full object-contain rounded shadow-2xl"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
