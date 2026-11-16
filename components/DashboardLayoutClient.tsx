@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { DashboardHeader } from "@/components/DashboardHeader";
-import { LoadingSkeleton } from "@/components/LoadingSkeleton";
+import { WingPollLoader } from "@/components/WingPollLoader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useApp } from "@/context/AppContext";
 
@@ -91,29 +91,17 @@ export default function DashboardLayout({
 
   if (authLoading || !firebaseUser) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
-        <div className="bg-white border border-slate-200 rounded-lg p-8 max-w-sm w-full text-center space-y-3 shadow-xs">
-          <Loader2 className="w-7 h-7 text-[#16A34A] animate-spin mx-auto" />
-          <p className="text-sm font-semibold text-slate-800">
-            {authLoading ? "Loading Your Account..." : "Redirecting to Login..."}
-          </p>
-        </div>
-      </div>
+      <WingPollLoader
+        message={
+          authLoading ? "Loading Your Account..." : "Redirecting to Login..."
+        }
+      />
     );
   }
 
   // Step 1 Gate: Non-admin users MUST verify their email address on /verify-email first (never stay on /dashboard)
   if (!isPrivilegedRole && !emailVerified) {
-    return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
-        <div className="bg-white border border-slate-200 rounded-lg p-8 max-w-sm w-full text-center space-y-3 shadow-xs">
-          <Loader2 className="w-7 h-7 text-[#16A34A] animate-spin mx-auto" />
-          <p className="text-sm font-semibold text-slate-800">
-            Redirecting to Email Verification...
-          </p>
-        </div>
-      </div>
-    );
+    return <WingPollLoader message="Redirecting to Email Verification..." />;
   }
 
   const isPendingApproval =
@@ -275,7 +263,7 @@ export default function DashboardLayout({
               </div>
             </div>
           ) : (
-            <Suspense fallback={<LoadingSkeleton rows={3} variant="card" />}>
+            <Suspense fallback={<WingPollLoader fullScreen={false} />}>
               {children}
             </Suspense>
           )}
