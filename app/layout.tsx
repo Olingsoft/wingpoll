@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/context/AppContext";
 import { JsonLd } from "@/components/JsonLd";
+import { PopunderManager } from "@/components/PopunderManager";
 import {
   SITE_CONFIG,
   SITE_URL,
@@ -115,20 +116,11 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-[#F8FAFC] text-slate-900">
         <JsonLd data={[buildOrganizationSchema(), buildWebSiteSchema()]} />
         <AppProvider>{children}</AppProvider>
+        <PopunderManager />
         <Script
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3984271218322436"
           strategy="lazyOnload"
           crossOrigin="anonymous"
-        />
-        <Script
-          src="https://abscloud.org/1/7adfc76466f73edaa573b97b204a9561"
-          strategy="lazyOnload"
-          data-cfasync="false"
-        />
-        <Script
-          src="https://bauval.org/14/08e451d279eff3066ce389c4216337f3"
-          strategy="lazyOnload"
-          data-cfasync="false"
         />
       </body>
     </html>
