@@ -14,9 +14,12 @@ function getSessionPopunderCount(): number {
   }
 }
 
-function incrementSessionPopunderCount(): void {
+function markSessionPopunderShown(): void {
   try {
-    const next = getSessionPopunderCount() + 1;
+    const next = Math.max(
+      getSessionPopunderCount() + 1,
+      POPUNDER_CONFIG.maxPerSession
+    );
     window.sessionStorage.setItem(POPUNDER_CONFIG.storageKey, String(next));
   } catch {
     // Ignore storage errors in restricted environments
@@ -41,18 +44,32 @@ export function PopunderManager() {
     if (!POPUNDER_CONFIG.enabled) return;
     if (getSessionPopunderCount() >= POPUNDER_CONFIG.maxPerSession) return;
 
-    // Load provider scripts lazily after mount only while within session cap
-    const idleTimer = window.setTimeout(() => {
-      if (getSessionPopunderCount() < POPUNDER_CONFIG.maxPerSession) {
-        injectProviderScripts();
-      }
-    }, 1500);
+    // Inject provider popunder scripts asynchronously once per session
+    injectProviderScripts();
 
-    const handleEligibleClick = (event: MouseEvent) => {
-      if (!event.isTrusted) return;
-      if (event.button !== 0) return;
+    let lastTrustedClickAt = 0;
+
+    const cleanup = () => {
+      window.removeEventListener("click", handleClick, false);
+      window.removeEventListener("blur", handleWindowBlur);
+    };
+
+    // If a provider script opens a popunder tab right after a user click,
+    // record the session cap so reloading/navigating won't re-inject scripts.
+    const handleWindowBlur = () => {
+      if (Date.now() - lastTrustedClickAt <= 1500) {
+        markSessionPopunderShown();
+        cleanup();
+      }
+    };
+
+    const handleClick = (event: MouseEvent) => {
+      if (!event.isTrusted || event.button !== 0) return;
+
+      lastTrustedClickAt = Date.now();
+
       if (getSessionPopunderCount() >= POPUNDER_CONFIG.maxPerSession) {
-        window.removeEventListener("click", handleEligibleClick, false);
+        cleanup();
         return;
       }
 
@@ -64,11 +81,11 @@ export function PopunderManager() {
         return;
       }
 
-      // Cap immediately before opening to prevent duplicate tabs on rapid clicks
-      incrementSessionPopunderCount();
-      window.removeEventListener("click", handleEligibleClick, false);
-
+      // If a direct popunder URL is configured, open it cleanly in a new tab
       if (POPUNDER_CONFIG.directUrl) {
+        markSessionPopunderShown();
+        cleanup();
+
         try {
           const adTab = window.open(
             POPUNDER_CONFIG.directUrl,
@@ -85,14 +102,11 @@ export function PopunderManager() {
       }
     };
 
-    window.addEventListener("click", handleEligibleClick, false);
+    window.addEventListener("click", handleClick, false);
+    window.addEventListener("blur", handleWindowBlur);
 
-    return () => {
-      window.clearTimeout(idleTimer);
-      window.removeEventListener("click", handleEligibleClick, false);
-    };
+    return cleanup;
   }, []);
 
   return null;
 }
-
