@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { HomeClient, HOME_FAQS } from "@/components/HomeClient";
+import { HomeClient } from "@/components/HomeClient";
+import { HOME_FAQS } from "@/lib/home-data";
 import { JsonLd } from "@/components/JsonLd";
 import {
   buildPageMetadata,
