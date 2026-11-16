@@ -12,7 +12,6 @@ import {
   History,
   LayoutDashboard,
   LogOut,
-  ShieldCheck,
   TrendingUp,
   User,
   Users,
@@ -123,32 +122,6 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
               </Link>
             );
           })}
-
-          {(user.role === "admin" || user.role === "agent-admin") && (
-            <div className="pt-4 mt-4 border-t border-slate-100">
-              <div className="px-2.5 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                Administration
-              </div>
-              {user.role === "admin" && (
-                <Link
-                  href="/admin"
-                  onClick={onCloseMobile}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                >
-                  <ShieldCheck className="w-4 h-4 text-[#14532D]" />
-                  <span>Super Admin</span>
-                </Link>
-              )}
-              <Link
-                href="/agent-admin"
-                onClick={onCloseMobile}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-              >
-                <ShieldCheck className="w-4 h-4 text-[#16A34A]" />
-                <span>Agent Admin</span>
-              </Link>
-            </div>
-          )}
         </div>
 
         {/* Bottom Logout */}

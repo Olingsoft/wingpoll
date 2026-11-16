@@ -39,12 +39,8 @@ export default function VerifyEmailPage() {
   // Redirect to /dashboard as soon as email is verified
   useEffect(() => {
     if (!firebaseUser || !emailVerified) return;
-    if (user.role === "admin") {
-      router.replace("/admin");
-    } else {
-      router.replace("/dashboard");
-    }
-  }, [firebaseUser, emailVerified, user.role, router]);
+    router.replace("/dashboard");
+  }, [firebaseUser, emailVerified, router]);
 
   // Process ?oobCode=... if the user clicked a direct verification link
   useEffect(() => {
@@ -100,12 +96,8 @@ export default function VerifyEmailPage() {
     try {
       const isNowVerified = await refreshEmailVerification();
       if (isNowVerified) {
-        const updatedProfile = await refreshUserProfile();
-        if (updatedProfile?.role === "admin") {
-          router.push("/admin");
-        } else {
-          router.push("/dashboard");
-        }
+        await refreshUserProfile();
+        router.push("/dashboard");
       } else {
         setStatusMessage({
           type: "warning",

@@ -56,11 +56,7 @@ export default function LoginPage() {
       const fbUser = await loginWithEmail(data.email, data.password);
       const savedProfile = await saveUserToFirestore(fbUser);
       updateUserProfile(savedProfile);
-      if (savedProfile.role === "admin") {
-        router.push("/admin");
-      } else if (savedProfile.role === "agent-admin") {
-        router.push("/agent-admin");
-      } else if (!fbUser.emailVerified) {
+      if (!fbUser.emailVerified) {
         sendVerificationEmail(fbUser).catch(() => {
           // Ignore if a verification email was already sent very recently
         });
@@ -84,11 +80,7 @@ export default function LoginPage() {
         authProvider: "google",
       });
       updateUserProfile(savedProfile);
-      if (savedProfile.role === "admin") {
-        router.push("/admin");
-      } else if (savedProfile.role === "agent-admin") {
-        router.push("/agent-admin");
-      } else if (!fbUser.emailVerified) {
+      if (!fbUser.emailVerified) {
         sendVerificationEmail(fbUser).catch(() => {
           // Ignore if a verification email was already sent very recently
         });
