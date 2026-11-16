@@ -39,8 +39,10 @@ import {
 
 // Official WingPoll production domain
 export const WINGPOLL_DOMAIN = (
-  process.env.NEXT_PUBLIC_SITE_URL || "https://wingpoll.co.ke"
-).replace(/\/$/, "");
+  process.env.NEXT_PUBLIC_SITE_URL || "https://www.wingpoll.co.ke"
+)
+  .replace(/\/$/, "")
+  .replace(/^https:\/\/wingpoll\.co\.ke/i, "https://www.wingpoll.co.ke");
 
 // Your web app's Firebase configuration loaded from .env
 const firebaseConfig = {

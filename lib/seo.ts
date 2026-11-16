@@ -2,14 +2,16 @@ import type { Metadata } from "next";
 import type { BlogPost } from "./types";
 
 export const ROOT_DOMAIN = (
-  process.env.NEXT_PUBLIC_ROOT_URL || "https://wingpoll.co.ke"
-).replace(/\/$/, "");
+  process.env.NEXT_PUBLIC_ROOT_URL || "https://www.wingpoll.co.ke"
+)
+  .replace(/\/$/, "")
+  .replace(/^https:\/\/wingpoll\.co\.ke$/i, "https://www.wingpoll.co.ke");
 
 export const BASE_PATH = "/en-ke";
 
-const rawSiteUrl = (
-  process.env.NEXT_PUBLIC_SITE_URL || ROOT_DOMAIN
-).replace(/\/$/, "");
+const rawSiteUrl = (process.env.NEXT_PUBLIC_SITE_URL || ROOT_DOMAIN)
+  .replace(/\/$/, "")
+  .replace(/^https:\/\/wingpoll\.co\.ke/i, "https://www.wingpoll.co.ke");
 
 export const SITE_URL = rawSiteUrl.endsWith(BASE_PATH)
   ? rawSiteUrl

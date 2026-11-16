@@ -6,18 +6,6 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
-        source: "/:path*",
-        has: [
-          {
-            type: "host",
-            value: "www.wingpoll.co.ke",
-          },
-        ],
-        destination: "https://wingpoll.co.ke/:path*",
-        basePath: false,
-        permanent: true,
-      },
-      {
         source: "/",
         destination: "/en-ke",
         basePath: false,
