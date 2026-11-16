@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -14,6 +14,7 @@ import {
   Mail,
 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
+import { WingPollLoader } from "@/components/WingPollLoader";
 import {
   getFirebaseAuthErrorMessage,
   loginWithEmail,
@@ -32,10 +33,28 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { updateUserProfile } = useApp();
+  const {
+    user,
+    firebaseUser,
+    emailVerified,
+    authLoading,
+    updateUserProfile,
+  } = useApp();
   const [authError, setAuthError] = useState<string | null>(null);
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  const isPrivilegedRole =
+    user.role === "admin" || user.role === "agent-admin";
+
+  useEffect(() => {
+    if (authLoading || !firebaseUser) return;
+    if (isPrivilegedRole || emailVerified || firebaseUser.emailVerified) {
+      router.replace("/dashboard");
+    } else {
+      router.replace("/verify-email");
+    }
+  }, [authLoading, firebaseUser, emailVerified, isPrivilegedRole, router]);
 
   const {
     register,
@@ -94,6 +113,14 @@ export default function LoginPage() {
       setIsGoogleLoading(false);
     }
   };
+
+  if (authLoading) {
+    return <WingPollLoader message="Checking your session..." />;
+  }
+
+  if (firebaseUser) {
+    return <WingPollLoader message="Redirecting to Dashboard..." />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F8FAFC]">

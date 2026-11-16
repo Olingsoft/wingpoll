@@ -18,6 +18,7 @@ import {
   User,
 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
+import { WingPollLoader } from "@/components/WingPollLoader";
 import { useApp } from "@/context/AppContext";
 import {
   getFirebaseAuthErrorMessage,
@@ -55,7 +56,14 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { updateUserProfile, refreshUserProfile } = useApp();
+  const {
+    user,
+    firebaseUser,
+    emailVerified,
+    authLoading,
+    updateUserProfile,
+    refreshUserProfile,
+  } = useApp();
   const [registeredSuccess, setRegisteredSuccess] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -78,6 +86,35 @@ export default function RegisterPage() {
       acceptTerms: false,
     },
   });
+
+  const isPrivilegedRole =
+    user.role === "admin" || user.role === "agent-admin";
+
+  useEffect(() => {
+    if (
+      authLoading ||
+      !firebaseUser ||
+      registeredSuccess ||
+      isSubmitting ||
+      isGoogleLoading
+    ) {
+      return;
+    }
+    if (isPrivilegedRole || emailVerified || firebaseUser.emailVerified) {
+      router.replace("/dashboard");
+    } else {
+      router.replace("/verify-email");
+    }
+  }, [
+    authLoading,
+    firebaseUser,
+    registeredSuccess,
+    isSubmitting,
+    isGoogleLoading,
+    emailVerified,
+    isPrivilegedRole,
+    router,
+  ]);
 
   // Auto-populate referralCode from ?ref=CODE in URL when referred friend opens link
   useEffect(() => {
@@ -139,6 +176,14 @@ export default function RegisterPage() {
       setIsGoogleLoading(false);
     }
   };
+
+  if (authLoading) {
+    return <WingPollLoader message="Checking your session..." />;
+  }
+
+  if (firebaseUser && !registeredSuccess && !isSubmitting && !isGoogleLoading) {
+    return <WingPollLoader message="Redirecting to Dashboard..." />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
