@@ -24,6 +24,8 @@ import {
   updateDoc,
   deleteDoc,
   collection,
+  query,
+  where,
 } from "firebase/firestore";
 import {
   Advertisement,
@@ -78,6 +80,51 @@ if (typeof window !== "undefined") {
     .catch(() => {
       // Ignore analytics errors in unsupported environments
     });
+}
+
+/**
+ * Pick an existing Agent Admin (`role === "agent-admin"`) to assign to a newly registered user.
+ * Prefers Active agent-admins and distributes users deterministically across available agents.
+ */
+async function pickAgentAdminForUser(userUid: string): Promise<{
+  id: string;
+  name: string;
+  email: string;
+} | null> {
+  try {
+    const q = query(
+      collection(db, "users"),
+      where("role", "==", "agent-admin")
+    );
+    const snap = await getDocs(q);
+    if (snap.empty) return null;
+
+    const allAgents = snap.docs
+      .map((d) => d.data() as Partial<UserProfile>)
+      .filter((u): u is Partial<UserProfile> & { id: string } => Boolean(u.id));
+
+    if (allAgents.length === 0) return null;
+
+    const activeAgents = allAgents.filter((a) => a.status === "Active");
+    const pool = (activeAgents.length > 0 ? activeAgents : allAgents).sort(
+      (a, b) => a.id.localeCompare(b.id)
+    );
+
+    const hash = Array.from(userUid).reduce(
+      (acc, ch) => acc + ch.charCodeAt(0),
+      0
+    );
+    const chosen = pool[hash % pool.length];
+
+    return {
+      id: chosen.id,
+      name: chosen.name || "WingPoll Agent",
+      email: chosen.email || "",
+    };
+  } catch (err) {
+    console.warn("Could not query agent-admin for user assignment:", err);
+    return null;
+  }
 }
 
 /**
@@ -137,6 +184,19 @@ export async function saveUserToFirestore(
       ? "Active"
       : ("Pending Approval" as const);
 
+  let assignedAgentId = existingData.assignedAgentId;
+  let assignedAgentName = existingData.assignedAgentName;
+  let assignedAgentEmail = existingData.assignedAgentEmail;
+
+  if (role === "user" && !assignedAgentId) {
+    const agent = await pickAgentAdminForUser(fbUser.uid);
+    if (agent) {
+      assignedAgentId = agent.id;
+      assignedAgentName = agent.name;
+      assignedAgentEmail = agent.email;
+    }
+  }
+
   const userProfile: UserProfile = {
     id: fbUser.uid,
     name: displayName,
@@ -168,6 +228,9 @@ export async function saveUserToFirestore(
       undefined,
     referredByUserId: existingData.referredByUserId || undefined,
     referralRewardPaid: existingData.referralRewardPaid ?? false,
+    assignedAgentId: assignedAgentId || undefined,
+    assignedAgentName: assignedAgentName || undefined,
+    assignedAgentEmail: assignedAgentEmail || undefined,
     joinedDate:
       existingData.joinedDate || new Date().toISOString().slice(0, 10),
     status: existingData.status || defaultStatus,
