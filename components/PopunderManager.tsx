@@ -35,6 +35,7 @@ function injectProviderScripts(): void {
     script.src = src;
     script.async = true;
     script.setAttribute("data-cfasync", "false");
+    script.crossOrigin = "anonymous";
     document.body.appendChild(script);
   }
 }

@@ -8,8 +8,11 @@ const NATIVE_AD_SCRIPT_SRC =
 
 export function NativeAdBanner() {
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const scriptLoadedRef = useRef(false);
 
   useEffect(() => {
+    if (scriptLoadedRef.current) return;
+
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
 
@@ -30,8 +33,11 @@ export function NativeAdBanner() {
     const script = document.createElement("script");
     script.async = true;
     script.setAttribute("data-cfasync", "false");
+    script.crossOrigin = "anonymous";
     script.src = NATIVE_AD_SCRIPT_SRC;
     wrapper.appendChild(script);
+
+    scriptLoadedRef.current = true;
 
     return () => {
       if (script.parentNode) {
