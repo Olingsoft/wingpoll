@@ -1,10 +1,13 @@
-import type { MetadataRoute } from "next";
+import { NextResponse } from "next/server";
 
-export default function ads(): MetadataRoute.Ads {
-  return [
-    {
-      publisher_id: "pub-3984271218322436",
-      tag_id: "f08c47fec0942fa0",
+export const dynamic = "force-dynamic";
+
+export function GET() {
+  const adsTxt = `google.com, pub-3984271218322436, DIRECT, f08c47fec0942fa0`;
+
+  return new NextResponse(adsTxt, {
+    headers: {
+      "Content-Type": "text/plain",
     },
-  ];
+  });
 }
