@@ -40,7 +40,6 @@ export function SocialBarAd() {
     const script = document.createElement("script");
     script.async = true;
     script.setAttribute("data-cfasync", "false");
-    script.crossOrigin = "anonymous";
     script.src = SOCIAL_BAR_SCRIPT_SRC;
     wrapper.appendChild(script);
 
