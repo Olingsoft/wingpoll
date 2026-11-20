@@ -671,12 +671,12 @@ export async function linkReferralOnRegistration(
 }
 
 /**
- * Reliably grant the referral reward (default KSh 50) to the referrer's Firestore account
+ * Reliably grant the referral reward (default KSh 25) to the referrer's Firestore account
  * when a referred user is approved by Admin (or completes a task), ensuring it is paid once.
  */
 export async function grantReferralRewardInFirestore(
   referredUserId: string,
-  bonusAmount = 50,
+  bonusAmount = 25,
   incrementTaskCount = false
 ): Promise<{
   referrerId: string;

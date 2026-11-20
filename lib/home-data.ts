@@ -22,7 +22,7 @@ export const HOME_FAQS = [
   {
     question: "How does the referral program work?",
     answer:
-      "Every registered user gets a unique referral code and link. When a friend signs up with your link and completes their first 3 approved tasks, you earn a KSh 50 referral reward.",
+      "Every registered user gets a unique referral code and link. When a friend signs up with your link and completes their first 3 approved tasks, you earn a KSh 25 referral reward.",
   },
 ];
 

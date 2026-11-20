@@ -49,7 +49,7 @@ export default function TermsAndConditionsPage() {
             heading: "3. Earnings, Referrals & Withdrawals",
             bullets: [
               "The minimum withdrawal threshold is KSh 300 in approved available balance.",
-              "Referral rewards (KSh 50) are credited only after the referred user verifies their email and receives Admin account activation.",
+              "Referral rewards (KSh 25) are credited only after the referred user verifies their email and receives Admin account activation.",
               "You are responsible for ensuring your registered M-Pesa number is accurate before requesting a payout.",
             ],
           },

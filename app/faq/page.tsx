@@ -67,7 +67,7 @@ const FAQ_GROUPS = [
       },
       {
         q: "How does the WingPoll referral bonus work?",
-        a: "Share your unique referral link from your dashboard. When a friend registers using your link, verifies their email, and is approved by Admin, you earn a KSh 50 referral reward.",
+        a: "Share your unique referral link from your dashboard. When a friend registers using your link, verifies their email, and is approved by Admin, you earn a KSh 25 referral reward.",
       },
     ],
   },

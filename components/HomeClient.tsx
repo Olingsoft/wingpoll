@@ -415,7 +415,7 @@ export function HomeClient() {
                 <ul className="space-y-2 pt-2 text-xs text-[#14532D]">
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-[#16A34A] shrink-0" />
-                    <span>Earn KSh 50 per qualified referred user</span>
+                    <span>Earn KSh 25 per qualified referred user</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-[#16A34A] shrink-0" />

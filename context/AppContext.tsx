@@ -637,7 +637,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
 
       // Also update referral progress & grant referral commission if user was referred
-      grantReferralRewardInFirestore(target.userId, 50, true).then(
+      grantReferralRewardInFirestore(target.userId, 25, true).then(
         (refResult) => {
           if (refResult) {
             const {
@@ -943,9 +943,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setNotifications((prev) => [notif, ...prev]);
     saveNotificationToFirestore(notif);
 
-    // When Admin approves a user account, automatically grant the referral reward (KSh 50) to their referrer!
+    // When Admin approves a user account, automatically grant the referral reward (KSh 25) to their referrer!
     if (nextStatus === "Active") {
-      const refResult = await grantReferralRewardInFirestore(userId, 50, false);
+      const refResult = await grantReferralRewardInFirestore(userId, 25, false);
       if (refResult) {
         const {
           referrerId,
@@ -1047,7 +1047,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (refRecord.referredUserId) {
       const refResult = await grantReferralRewardInFirestore(
         refRecord.referredUserId,
-        50,
+        25,
         false
       );
       if (refResult) {
@@ -1079,7 +1079,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Fallback if referral record did not have referredUserId
-    const bonusAmount = 50;
+    const bonusAmount = 25;
     const updatedRecord: ReferralRecord = {
       ...refRecord,
       status: "Active",

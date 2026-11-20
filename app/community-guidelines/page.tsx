@@ -34,7 +34,7 @@ export default function CommunityGuidelinesPage() {
           {
             heading: "1. One Authentic Account Per Person",
             paragraphs: [
-              "Every contributor may operate only one verified WingPoll account. Creating multiple accounts to claim extra task slots or abuse the KSh 50 referral bonus is strictly prohibited and leads to permanent suspension.",
+              "Every contributor may operate only one verified WingPoll account. Creating multiple accounts to claim extra task slots or abuse the KSh 25 referral bonus is strictly prohibited and leads to permanent suspension.",
             ],
           },
           {

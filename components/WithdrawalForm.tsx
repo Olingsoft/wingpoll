@@ -239,6 +239,11 @@ export function WithdrawalForm() {
           <Wallet className="w-4 h-4" />
           <span>Request Withdrawal</span>
         </button>
+
+        <p className="text-center text-[11px] text-slate-400 pt-1">
+          Withdrawal is powered by{" "}
+          <span className="font-semibold text-slate-600">Olingsoft Tech</span>
+        </p>
       </form>
 
       <ConfirmationModal

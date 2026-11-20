@@ -162,7 +162,7 @@ export default function AboutPage() {
                   </span>
                   <span className="inline-flex items-center gap-1.5">
                     <Users className="w-4 h-4 text-[#4ade80]" />
-                    KSh 50 Referral Bonus
+                    KSh 25 Referral Bonus
                   </span>
                   <span className="inline-flex items-center gap-1.5">
                     <Smartphone className="w-4 h-4 text-[#4ade80]" />

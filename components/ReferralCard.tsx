@@ -49,13 +49,13 @@ export function ReferralCard() {
         <div>
           <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#16A34A] bg-[#F0FDF4] border border-emerald-200 px-2.5 py-0.5 rounded mb-2">
             <Gift className="w-3.5 h-3.5" />
-            Earn KSh 50 Per Active Friend
+            Earn KSh 25 Per Active Friend
           </span>
           <h3 className="text-base font-semibold text-slate-900">
             Invite Friends & Earn Commissions
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
-            Share your unique referral link. You earn KSh 50 once your referred
+            Share your unique referral link. You earn KSh 25 once your referred
             friend completes their first 3 approved tasks.
           </p>
         </div>

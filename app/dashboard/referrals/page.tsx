@@ -28,7 +28,7 @@ export default function ReferralsPage() {
           Referrals & Commission Program
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-          Invite friends to Wingpoll and earn KSh 50 for every friend who
+          Invite friends to Wingpoll and earn KSh 25 for every friend who
           completes their first 3 tasks.
         </p>
       </div>
