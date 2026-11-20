@@ -95,9 +95,9 @@ export const INITIAL_BLOG_POSTS: BlogPost[] = [
     seoTitle:
       "WingPoll M-Pesa Withdrawals & KSh 25 Referral Commissions Explained",
     metaDescription:
-      "Everything you need to know about WingPoll pending vs. available balance, the KSh 300 M-Pesa withdrawal minimum, and KSh 25 referral bonuses.",
+      "Everything you need to know about WingPoll pending vs. available balance, the KSh 550 M-Pesa withdrawal minimum, and KSh 25 referral bonuses.",
     excerpt:
-      "Everything you need to know about pending vs. available balances, the KSh 300 withdrawal threshold, and earning KSh 25 per referred friend.",
+      "Everything you need to know about pending vs. available balances, the KSh 550 withdrawal threshold, and earning KSh 25 per referred friend.",
     featuredImage: "/heroimg.jpg",
     featuredImageAlt:
       "Kenyan microtask earner checking M-Pesa withdrawal balance and referral rewards on WingPoll",
@@ -116,7 +116,7 @@ export const INITIAL_BLOG_POSTS: BlogPost[] = [
     published: true,
     content: [
       "When you submit a task on WingPoll, its reward is immediately reflected in your Pending Earnings while our moderators verify your work.",
-      "Once approved, the reward moves directly into your Available Balance. As soon as your Available Balance reaches KSh 300 or more, you can head to the Withdrawals tab and request an M-Pesa transfer.",
+      "Once approved, the reward moves directly into your Available Balance. As soon as your Available Balance reaches KSh 550 or more, you can head to the Withdrawals tab and request an M-Pesa transfer.",
       "Want to boost your balance faster? Share your unique referral link from the Referrals page. Every time a friend registers with your code and completes their first 3 approved tasks, KSh 25 is credited to your account.",
     ],
   },

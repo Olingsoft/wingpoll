@@ -63,7 +63,7 @@ const HOW_IT_WORKS_STEPS = [
     step: "05",
     title: "Request withdrawal",
     description:
-      "Once your balance reaches KSh 300, submit a withdrawal request for admin approval and M-Pesa payout.",
+      "Once your balance reaches KSh 550, submit a withdrawal request for admin approval and M-Pesa payout.",
     icon: Wallet,
   },
 ];
@@ -178,7 +178,7 @@ export function HomeClient() {
                 {/* Key Trust Indicators */}
                 <div className="pt-5 grid grid-cols-3 gap-4 border-t border-white/20 max-w-lg">
                   <div>
-                    <p className="text-lg font-bold text-white">KSh 300</p>
+                    <p className="text-lg font-bold text-white">KSh 550</p>
                     <p className="text-xs text-slate-300">Min. M-Pesa Payout</p>
                   </div>
                   <div>
@@ -438,14 +438,14 @@ export function HomeClient() {
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
                   Request a payout once your available balance reaches our
-                  minimum threshold of <strong>KSh 300</strong>. Requests are
+                  minimum threshold of <strong>KSh 550</strong>. Requests are
                   verified and approved by an admin before disbursement to your
                   Kenyan M-Pesa number.
                 </p>
                 <ul className="space-y-2 pt-2 text-xs text-slate-700">
                   <li className="flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-[#16A34A] shrink-0" />
-                    <span>Minimum withdrawal threshold: KSh 300</span>
+                    <span>Minimum withdrawal threshold: KSh 550</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-[#16A34A] shrink-0" />

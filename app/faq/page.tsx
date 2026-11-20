@@ -59,11 +59,11 @@ const FAQ_GROUPS = [
     items: [
       {
         q: "What is the minimum withdrawal amount?",
-        a: "You can request a withdrawal once your approved available balance reaches KSh 300.",
+        a: "You can request a withdrawal once your approved available balance reaches KSh 550.",
       },
       {
         q: "How do M-Pesa payouts work?",
-        a: "Go to the Withdrawals page in your dashboard, confirm your Safaricom M-Pesa phone number, enter an amount of KSh 300 or more, and submit your request for processing.",
+        a: "Go to the Withdrawals page in your dashboard, confirm your Safaricom M-Pesa phone number, enter an amount of KSh 550 or more, and submit your request for processing.",
       },
       {
         q: "How does the WingPoll referral bonus work?",

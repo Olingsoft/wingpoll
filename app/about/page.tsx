@@ -38,7 +38,7 @@ const CORE_VALUES = [
   {
     title: "Reliable M-Pesa Payouts",
     description:
-      "With a low KSh 300 withdrawal threshold, earners can transfer their approved balance straight to their Safaricom M-Pesa wallet.",
+      "With a low KSh 550 withdrawal threshold, earners can transfer their approved balance straight to their Safaricom M-Pesa wallet.",
     icon: Smartphone,
   },
 ];
@@ -153,7 +153,7 @@ export default function AboutPage() {
                   Create your free earner account today, browse available tasks
                   in data entry, email extraction, and document formatting, and
                   withdraw your rewards via M-Pesa once your balance reaches KSh
-                  300.
+                  550.
                 </p>
                 <div className="flex flex-wrap gap-4 pt-1 text-xs text-emerald-200">
                   <span className="inline-flex items-center gap-1.5">

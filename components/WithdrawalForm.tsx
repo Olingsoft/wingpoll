@@ -30,14 +30,14 @@ export function WithdrawalForm() {
     mpesaNumber: string;
   } | null>(null);
 
-  const isBalanceBelowMinimum = user.availableBalance < 300;
+  const isBalanceBelowMinimum = user.availableBalance < 550;
 
   const withdrawalSchema = z.object({
     amount: z
       .number({ message: "Please enter a valid KSh amount." })
-      .min(300, "Minimum withdrawal amount is KSh 300.")
+      .min(550, "Minimum withdrawal amount is KSh 550.")
       .max(
-        Math.max(300, user.availableBalance),
+        Math.max(550, user.availableBalance),
         `Amount cannot exceed your available balance of KSh ${user.availableBalance.toLocaleString()}.`
       ),
     mpesaNumber: z
@@ -60,7 +60,7 @@ export function WithdrawalForm() {
   } = useForm<WithdrawalFormValues>({
     resolver: zodResolver(withdrawalSchema),
     defaultValues: {
-      amount: user.availableBalance >= 300 ? 300 : undefined,
+      amount: user.availableBalance >= 550 ? 550 : undefined,
       mpesaNumber: user.mpesaNumber || "0712345678",
     },
   });
@@ -113,14 +113,14 @@ export function WithdrawalForm() {
           <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
           <div className="text-xs text-amber-900 space-y-1">
             <p className="font-semibold">
-              Insufficient Balance for Withdrawal (Minimum KSh 300)
+              Insufficient Balance for Withdrawal (Minimum KSh 550)
             </p>
             <p className="text-amber-800">
               Your current available balance is{" "}
               <strong>KSh {user.availableBalance.toLocaleString()}</strong>. You
               need at least{" "}
               <strong>
-                KSh {Math.max(0, 300 - user.availableBalance).toLocaleString()}
+                KSh {Math.max(0, 550 - user.availableBalance).toLocaleString()}
               </strong>{" "}
               more in approved task earnings to request an M-Pesa payout.
             </p>
@@ -183,7 +183,7 @@ export function WithdrawalForm() {
               type="number"
               step="1"
               disabled={isBalanceBelowMinimum}
-              placeholder="e.g. 450"
+              placeholder="e.g. 600"
               {...register("amount", { valueAsNumber: true })}
               className="w-full pl-11 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-md focus:outline-none focus:bg-white focus:border-[#16A34A] disabled:opacity-60"
             />
@@ -192,7 +192,7 @@ export function WithdrawalForm() {
             <p className="text-xs text-red-600 mt-1">{errors.amount.message}</p>
           )}
           <p className="text-[11px] text-slate-400 mt-1">
-            Minimum withdrawal: KSh 300 • Available: KSh{" "}
+            Minimum withdrawal: KSh 550 • Available: KSh{" "}
             {user.availableBalance.toLocaleString()}
           </p>
         </div>

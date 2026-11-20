@@ -73,9 +73,9 @@ export default function DashboardOverviewPage() {
         <StatsCard
           title="Available Balance"
           value={`KSh ${user.availableBalance.toLocaleString()}`}
-          subtitle="Min. withdrawal: KSh 300"
+          subtitle="Min. withdrawal: KSh 550"
           trend={
-            user.availableBalance >= 300
+            user.availableBalance >= 550
               ? "Eligible for M-Pesa"
               : "Below threshold"
           }

@@ -33,7 +33,7 @@ const HELP_CARDS = [
   },
   {
     title: "M-Pesa Withdrawals",
-    description: "Minimum KSh 300 threshold, payout timing, and number setup.",
+    description: "Minimum KSh 550 threshold, payout timing, and number setup.",
     href: "/faq",
     icon: CreditCard,
   },
@@ -104,7 +104,7 @@ export default function HelpCenterPage() {
           {
             heading: "3. Managing Earnings & M-Pesa Withdrawals",
             paragraphs: [
-              "Approved task rewards and KSh 25 referral bonuses are added to your Available Balance. Once your balance reaches KSh 300 or higher, you can submit a withdrawal request to your registered Safaricom M-Pesa number from the Withdrawals page.",
+              "Approved task rewards and KSh 25 referral bonuses are added to your Available Balance. Once your balance reaches KSh 550 or higher, you can submit a withdrawal request to your registered Safaricom M-Pesa number from the Withdrawals page.",
             ],
           },
         ]}

@@ -17,7 +17,7 @@ export const HOME_FAQS = [
   {
     question: "How do M-Pesa withdrawals work?",
     answer:
-      "Once your Available Balance reaches at least KSh 300, go to the Withdrawals page, enter the amount and your Safaricom M-Pesa phone number, and submit a withdrawal request. An administrator reviews and approves your request to disburse the funds via M-Pesa.",
+      "Once your Available Balance reaches at least KSh 550, go to the Withdrawals page, enter the amount and your Safaricom M-Pesa phone number, and submit a withdrawal request. An administrator reviews and approves your request to disburse the funds via M-Pesa.",
   },
   {
     question: "How does the referral program work?",

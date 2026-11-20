@@ -26,7 +26,7 @@ export default function WithdrawalsPage() {
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
           Submit a withdrawal request once your available balance reaches KSh
-          300. Requests are reviewed and approved by an admin for M-Pesa payout.
+          550. Requests are reviewed and approved by an admin for M-Pesa payout.
         </p>
       </div>
 
@@ -36,9 +36,9 @@ export default function WithdrawalsPage() {
           title="Available Balance"
           value={`KSh ${user.availableBalance.toLocaleString()}`}
           subtitle={
-            user.availableBalance >= 300
+            user.availableBalance >= 550
               ? "Eligible to request withdrawal"
-              : "Minimum KSh 300 required"
+              : "Minimum KSh 550 required"
           }
           icon={<Wallet className="w-5 h-5" />}
           highlighted
@@ -51,7 +51,7 @@ export default function WithdrawalsPage() {
         />
         <StatsCard
           title="Minimum Withdrawal"
-          value="KSh 300"
+          value="KSh 550"
           subtitle="Payment Method: Safaricom M-Pesa"
           icon={<Smartphone className="w-5 h-5" />}
         />
@@ -79,7 +79,7 @@ export default function WithdrawalsPage() {
               <li className="flex items-start gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A] mt-1.5 shrink-0" />
                 <span>
-                  <strong>1. Submit Request (Min. KSh 300):</strong> Enter your
+                  <strong>1. Submit Request (Min. KSh 550):</strong> Enter your
                   withdrawal amount and M-Pesa number to submit a payout
                   request.
                 </span>

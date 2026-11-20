@@ -197,7 +197,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                   </h2>
                   <p className="text-xs text-slate-600 mt-1">
                     Create your earner account and withdraw KSh earnings via
-                    M-Pesa once you reach KSh 300.
+                    M-Pesa once you reach KSh 550.
                   </p>
                 </div>
                 <Link
